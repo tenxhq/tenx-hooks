@@ -1,0 +1,15 @@
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+
+authors = ["Aldo Cortesi <aldo@corte.si>"]
+description = "Anthropic Hooks for Rust"
+license = "MIT"
+repository = "https://github.com/tenxhq/tenx-hooks"
+keywords = ["mcp", "anthropic", "claude"]
+
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+
