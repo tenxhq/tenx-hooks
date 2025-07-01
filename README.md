@@ -38,9 +38,9 @@ tenx-hooks = "0.0.1"
 Here's a simple hook that validates Bash commands before execution:
 
 ```rust
-use tenx_hooks::{Hook, PreToolUseInput, PreToolUseOutput, Decision};
+use tenx_hooks::{Hook, PreToolUseOutput, Decision, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     
     // Read and parse the PreToolUse input
@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     decision: Some(Decision::Block),
                     reason: Some("Dangerous command detected: rm -rf is not allowed".to_string()),
                     ..Default::default()
-                });
+                })?;
                 return Ok(());
             }
         }
@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         decision: Some(Decision::Approve),
         reason: Some("Command validated".to_string()),
         ..Default::default()
-    });
+    })?;
     
     Ok(())
 }
@@ -79,9 +79,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Runs before tool execution. Can approve or block the operation.
 
 ```rust
-use tenx_hooks::{Hook, PreToolUseOutput, Decision};
+use tenx_hooks::{Hook, PreToolUseOutput, Decision, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     let input = hook.pre_tool_use()?;
     
@@ -93,14 +93,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     decision: Some(Decision::Block),
                     reason: Some("Cannot write to system directories".to_string()),
                     ..Default::default()
-                });
+                })?;
                 return Ok(());
             }
         }
     }
     
     // Approve by default
-    hook.respond(PreToolUseOutput::approve("Allowed"));
+    hook.respond(PreToolUseOutput::approve("Allowed"))?;
     Ok(())
 }
 ```
@@ -109,9 +109,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Runs after successful tool execution. Perfect for formatting or validation.
 
 ```rust
-use tenx_hooks::{Hook, PostToolUseOutput, Decision};
+use tenx_hooks::{Hook, PostToolUseOutput, Decision, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     let input = hook.post_tool_use()?;
     
@@ -125,7 +125,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         hook.respond(PostToolUseOutput {
             suppress_output: true,
             ..Default::default()
-        });
+        })?;
     }
     
     Ok(())
@@ -136,9 +136,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Customizes how you receive notifications from Claude Code.
 
 ```rust
-use tenx_hooks::{Hook, NotificationOutput};
+use tenx_hooks::{Hook, NotificationOutput, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     let input = hook.notification()?;
     
@@ -149,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     hook.respond(NotificationOutput {
         suppress_output: true,
         ..Default::default()
-    });
+    })?;
     
     Ok(())
 }
@@ -159,9 +159,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Runs when Claude finishes responding. Can request continuation.
 
 ```rust
-use tenx_hooks::{Hook, StopOutput, Decision};
+use tenx_hooks::{Hook, StopOutput, Decision, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     let input = hook.stop()?;
     
@@ -171,7 +171,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             decision: Some(Decision::Block),
             reason: Some("Tests are failing. Please fix them before stopping.".to_string()),
             ..Default::default()
-        });
+        })?;
     }
     
     Ok(())
@@ -232,11 +232,11 @@ pub struct StopOutput {
 
 ### Command Logger
 ```rust
-use tenx_hooks::{Hook, PreToolUseOutput};
+use tenx_hooks::{Hook, PreToolUseOutput, Result};
 use std::fs::OpenOptions;
 use std::io::Write;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     let input = hook.pre_tool_use()?;
     
@@ -254,7 +254,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     hook.respond(PreToolUseOutput {
         suppress_output: true,
         ..Default::default()
-    });
+    })?;
     
     Ok(())
 }
@@ -262,9 +262,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Code Style Enforcer
 ```rust
-use tenx_hooks::{Hook, PreToolUseOutput, Decision};
+use tenx_hooks::{Hook, PreToolUseOutput, Decision, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let hook = Hook::new();
     let input = hook.pre_tool_use()?;
     
@@ -275,14 +275,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if path.ends_with(".py") && content.contains('\t') {
                     hook.respond(PreToolUseOutput::block(
                         "Python files must use spaces, not tabs"
-                    ));
+                    ))?;
                     return Ok(());
                 }
             }
         }
     }
     
-    hook.respond(PreToolUseOutput::approve("Style check passed"));
+    hook.respond(PreToolUseOutput::approve("Style check passed"))?;
     Ok(())
 }
 ```

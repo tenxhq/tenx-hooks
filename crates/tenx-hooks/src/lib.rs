@@ -32,6 +32,26 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{self, Read};
+use thiserror::Error;
+
+/// Type alias for Results in this library
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Error types for hook operations
+#[derive(Debug, Error)]
+pub enum Error {
+    /// Error reading from stdin
+    #[error("failed to read from stdin: {0}")]
+    Io(#[from] io::Error),
+
+    /// Error parsing JSON input
+    #[error("failed to parse JSON: {0}")]
+    JsonParse(#[from] serde_json::Error),
+
+    /// Invalid exit code provided
+    #[error("invalid exit code {0}: codes 0 and 2 are reserved")]
+    InvalidExitCode(i32),
+}
 
 /// Main hook interface for interacting with Claude Code.
 ///
@@ -47,46 +67,38 @@ impl Hook {
     }
 
     /// Read and parse PreToolUse input from stdin
-    pub fn pre_tool_use(&self) -> Result<PreToolUseInput, HookError> {
+    pub fn pre_tool_use(&self) -> Result<PreToolUseInput> {
         self.read_input()
     }
 
     /// Read and parse PostToolUse input from stdin
-    pub fn post_tool_use(&self) -> Result<PostToolUseInput, HookError> {
+    pub fn post_tool_use(&self) -> Result<PostToolUseInput> {
         self.read_input()
     }
 
     /// Read and parse Notification input from stdin
-    pub fn notification(&self) -> Result<NotificationInput, HookError> {
+    pub fn notification(&self) -> Result<NotificationInput> {
         self.read_input()
     }
 
     /// Read and parse Stop input from stdin
-    pub fn stop(&self) -> Result<StopInput, HookError> {
+    pub fn stop(&self) -> Result<StopInput> {
         self.read_input()
     }
 
     /// Send a response to stdout
-    pub fn respond<T: Serialize>(&self, output: T) {
-        match serde_json::to_string(&output) {
-            Ok(json) => {
-                println!("{json}");
-            }
-            Err(e) => {
-                eprintln!("Failed to serialize output: {e}");
-                std::process::exit(1);
-            }
-        }
+    pub fn respond<T: Serialize>(&self, output: T) -> Result<()> {
+        let json = serde_json::to_string(&output)?;
+        println!("{json}");
+        Ok(())
     }
 
     /// Internal method to read and parse JSON from stdin
-    fn read_input<T: for<'de> Deserialize<'de>>(&self) -> Result<T, HookError> {
+    fn read_input<T: for<'de> Deserialize<'de>>(&self) -> Result<T> {
         let mut buffer = String::new();
-        io::stdin()
-            .read_to_string(&mut buffer)
-            .map_err(HookError::IoError)?;
-
-        serde_json::from_str(&buffer).map_err(HookError::ParseError)
+        io::stdin().read_to_string(&mut buffer)?;
+        let parsed = serde_json::from_str(&buffer)?;
+        Ok(parsed)
     }
 }
 
@@ -95,26 +107,6 @@ impl Default for Hook {
         Self::new()
     }
 }
-
-/// Error types for hook operations
-#[derive(Debug)]
-pub enum HookError {
-    /// Error reading from stdin
-    IoError(io::Error),
-    /// Error parsing JSON input
-    ParseError(serde_json::Error),
-}
-
-impl std::fmt::Display for HookError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HookError::IoError(e) => write!(f, "IO error: {e}"),
-            HookError::ParseError(e) => write!(f, "Parse error: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for HookError {}
 
 /// Decision type for approve/block operations.
 ///
@@ -230,7 +222,7 @@ pub struct PreToolUseOutput {
     /// If false, Claude stops processing. This is different from blocking
     /// a specific tool call.
     #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub continue_: Option<bool>,
+    pub cont: Option<bool>,
 
     /// Message shown to user when continue is false. Not shown to Claude.
     #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
@@ -279,7 +271,7 @@ pub struct PostToolUseOutput {
 
     /// Whether Claude should continue after hook execution (default: true)
     #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub continue_: Option<bool>,
+    pub cont: Option<bool>,
 
     /// Message shown to user when continue is false
     #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
@@ -308,7 +300,7 @@ impl PostToolUseOutput {
 pub struct NotificationOutput {
     /// Whether Claude should continue after hook execution (default: true)
     #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub continue_: Option<bool>,
+    pub cont: Option<bool>,
 
     /// Message shown to user when continue is false
     #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
@@ -337,7 +329,7 @@ pub struct StopOutput {
     /// Whether Claude should continue after hook execution (default: true).
     /// Takes precedence over decision if set to false.
     #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub continue_: Option<bool>,
+    pub cont: Option<bool>,
 
     /// Message shown to user when continue is false
     #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
@@ -388,12 +380,12 @@ pub mod exit {
     ///
     /// Stderr is shown to the user and execution continues.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if code is 0 or 2 (reserved exit codes).
-    pub fn error(code: i32) {
+    /// Returns an error if code is 0 or 2 (reserved exit codes).
+    pub fn error(code: i32) -> crate::Result<()> {
         if code == 0 || code == 2 {
-            panic!("Invalid error code: {code} (reserved)");
+            return Err(crate::Error::InvalidExitCode(code));
         }
         std::process::exit(code);
     }
@@ -436,5 +428,27 @@ mod tests {
         assert!(json.contains("\"decision\":\"approve\""));
         assert!(json.contains("\"reason\":\"test\""));
         assert!(json.contains("\"suppressOutput\":true"));
+    }
+
+    #[test]
+    fn test_error_exit_code_validation() {
+        // Test that reserved exit codes return errors
+        assert!(matches!(exit::error(0), Err(Error::InvalidExitCode(0))));
+        assert!(matches!(exit::error(2), Err(Error::InvalidExitCode(2))));
+    }
+
+    #[test]
+    fn test_error_display() {
+        let io_err = Error::Io(io::Error::new(io::ErrorKind::Other, "test"));
+        assert_eq!(io_err.to_string(), "failed to read from stdin: test");
+
+        let json_err = Error::JsonParse(serde_json::from_str::<Value>("invalid").unwrap_err());
+        assert!(json_err.to_string().contains("failed to parse JSON"));
+
+        let exit_err = Error::InvalidExitCode(0);
+        assert_eq!(
+            exit_err.to_string(),
+            "invalid exit code 0: codes 0 and 2 are reserved"
+        );
     }
 }
