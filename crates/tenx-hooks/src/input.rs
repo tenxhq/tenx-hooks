@@ -1,0 +1,74 @@
+use serde::Deserialize;
+use serde_json::Value;
+use std::collections::HashMap;
+
+/// Input structure for PreToolUse hooks.
+///
+/// PreToolUse hooks run after Claude creates tool parameters but before
+/// processing the tool call. They can approve or block the operation.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct PreToolUse {
+    /// Unique identifier for the current Claude Code session
+    pub session_id: String,
+    /// Path to the conversation transcript JSON file
+    pub transcript_path: String,
+    /// Name of the tool being called (e.g., "Bash", "Write", "Edit")
+    pub tool_name: String,
+    /// Tool-specific input parameters. The exact schema depends on the tool.
+    pub tool_input: HashMap<String, Value>,
+}
+
+/// Input structure for PostToolUse hooks.
+///
+/// PostToolUse hooks run immediately after a tool completes successfully.
+/// They can provide feedback to Claude but cannot prevent the tool from running
+/// (since it already ran).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct PostToolUse {
+    /// Unique identifier for the current Claude Code session
+    pub session_id: String,
+    /// Path to the conversation transcript JSON file
+    pub transcript_path: String,
+    /// Name of the tool that was called
+    pub tool_name: String,
+    /// Tool-specific input parameters that were used
+    pub tool_input: HashMap<String, Value>,
+    /// Tool-specific response data. The exact schema depends on the tool.
+    pub tool_response: HashMap<String, Value>,
+}
+
+/// Input structure for Notification hooks.
+///
+/// Notification hooks run when Claude Code sends notifications, allowing
+/// you to customize how you receive alerts (e.g., when Claude needs input
+/// or permission to run something).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct Notification {
+    /// Unique identifier for the current Claude Code session
+    pub session_id: String,
+    /// Path to the conversation transcript JSON file
+    pub transcript_path: String,
+    /// The notification message content
+    pub message: String,
+    /// The notification title (typically "Claude Code")
+    pub title: String,
+}
+
+/// Input structure for Stop hooks.
+///
+/// Stop hooks run when Claude Code has finished responding. They can
+/// block Claude from stopping and request continuation.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct Stop {
+    /// Unique identifier for the current Claude Code session
+    pub session_id: String,
+    /// Path to the conversation transcript JSON file
+    pub transcript_path: String,
+    /// True when Claude Code is already continuing as a result of a stop hook.
+    /// Check this to prevent infinite loops.
+    pub stop_hook_active: bool,
+}

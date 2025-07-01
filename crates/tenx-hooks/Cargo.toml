@@ -12,3 +12,15 @@ keywords.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
+
+[[example]]
+name = "precheck"
+path = "../../examples/precheck.rs"
+
+[[example]]
+name = "bash_validator"
+path = "../../examples/bash_validator.rs"
+
+[[example]]
+name = "file_guard"
+path = "../../examples/file_guard.rs"
