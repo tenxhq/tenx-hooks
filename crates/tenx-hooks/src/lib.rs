@@ -34,6 +34,11 @@ use std::collections::HashMap;
 use std::io::{self, Read};
 use thiserror::Error;
 
+/// Helper function for serde to skip serializing None values
+fn is_none<T>(opt: &Option<T>) -> bool {
+    opt.is_none()
+}
+
 /// Type alias for Results in this library
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -137,6 +142,7 @@ pub struct CommonInput {
 /// PreToolUse hooks run after Claude creates tool parameters but before
 /// processing the tool call. They can approve or block the operation.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PreToolUseInput {
     /// Unique identifier for the current Claude Code session
     pub session_id: String,
@@ -154,6 +160,7 @@ pub struct PreToolUseInput {
 /// They can provide feedback to Claude but cannot prevent the tool from running
 /// (since it already ran).
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PostToolUseInput {
     /// Unique identifier for the current Claude Code session
     pub session_id: String,
@@ -173,6 +180,7 @@ pub struct PostToolUseInput {
 /// you to customize how you receive alerts (e.g., when Claude needs input
 /// or permission to run something).
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct NotificationInput {
     /// Unique identifier for the current Claude Code session
     pub session_id: String,
@@ -189,6 +197,7 @@ pub struct NotificationInput {
 /// Stop hooks run when Claude Code has finished responding. They can
 /// block Claude from stopping and request continuation.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct StopInput {
     /// Unique identifier for the current Claude Code session
     pub session_id: String,
@@ -203,33 +212,34 @@ pub struct StopInput {
 ///
 /// Controls whether a tool call proceeds and provides feedback to Claude.
 #[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct PreToolUseOutput {
     /// Whether to approve or block the tool call.
     /// - `Approve`: Bypasses the permission system, reason shown to user but not Claude
     /// - `Block`: Prevents execution, reason shown to Claude
     /// - `None`: Follows existing permission flow
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub decision: Option<Decision>,
 
     /// Explanation for the decision. Usage depends on decision type:
     /// - For `Approve`: Shown to user but not Claude
     /// - For `Block`: Shown to Claude as feedback
     /// - For `None`: Ignored
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub reason: Option<String>,
 
     /// Whether Claude should continue after hook execution (default: true).
     /// If false, Claude stops processing. This is different from blocking
     /// a specific tool call.
-    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub cont: Option<bool>,
+    #[serde(rename = "continue", skip_serializing_if = "is_none")]
+    pub continue_: Option<bool>,
 
     /// Message shown to user when continue is false. Not shown to Claude.
-    #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub stop_reason: Option<String>,
 
     /// Hide output from transcript mode (default: false)
-    #[serde(rename = "suppressOutput", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub suppress_output: Option<bool>,
 }
 
@@ -257,28 +267,29 @@ impl PreToolUseOutput {
 ///
 /// Provides feedback to Claude after a tool has already executed.
 #[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct PostToolUseOutput {
     /// Whether to provide feedback to Claude.
     /// - `Block`: Automatically prompts Claude with reason
     /// - `None`: No feedback provided
     /// Note: Cannot use `Approve` since the tool already ran
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub decision: Option<Decision>,
 
     /// Feedback message for Claude (used when decision is Block)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub reason: Option<String>,
 
     /// Whether Claude should continue after hook execution (default: true)
-    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub cont: Option<bool>,
+    #[serde(rename = "continue", skip_serializing_if = "is_none")]
+    pub continue_: Option<bool>,
 
     /// Message shown to user when continue is false
-    #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub stop_reason: Option<String>,
 
     /// Hide output from transcript mode (default: false)
-    #[serde(rename = "suppressOutput", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub suppress_output: Option<bool>,
 }
 
@@ -297,17 +308,18 @@ impl PostToolUseOutput {
 ///
 /// Controls continuation and output visibility for notification handling.
 #[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct NotificationOutput {
     /// Whether Claude should continue after hook execution (default: true)
-    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub cont: Option<bool>,
+    #[serde(rename = "continue", skip_serializing_if = "is_none")]
+    pub continue_: Option<bool>,
 
     /// Message shown to user when continue is false
-    #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub stop_reason: Option<String>,
 
     /// Hide output from transcript mode (default: false)
-    #[serde(rename = "suppressOutput", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub suppress_output: Option<bool>,
 }
 
@@ -315,28 +327,29 @@ pub struct NotificationOutput {
 ///
 /// Controls whether Claude can stop or must continue processing.
 #[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct StopOutput {
     /// Whether to block Claude from stopping.
     /// - `Block`: Prevents stopping, must provide reason
     /// - `None`: Allows Claude to stop normally
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub decision: Option<Decision>,
 
     /// Required when decision is Block. Tells Claude how to proceed.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub reason: Option<String>,
 
     /// Whether Claude should continue after hook execution (default: true).
     /// Takes precedence over decision if set to false.
-    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
-    pub cont: Option<bool>,
+    #[serde(rename = "continue", skip_serializing_if = "is_none")]
+    pub continue_: Option<bool>,
 
     /// Message shown to user when continue is false
-    #[serde(rename = "stopReason", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub stop_reason: Option<String>,
 
     /// Hide output from transcript mode (default: false)
-    #[serde(rename = "suppressOutput", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "is_none")]
     pub suppress_output: Option<bool>,
 }
 
@@ -450,5 +463,19 @@ mod tests {
             exit_err.to_string(),
             "invalid exit code 0: codes 0 and 2 are reserved"
         );
+    }
+
+    #[test]
+    fn test_camel_case_serialization() {
+        let output = PreToolUseOutput {
+            stop_reason: Some("test stop".to_string()),
+            suppress_output: Some(true),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&output).unwrap();
+        assert!(json.contains("\"stopReason\":\"test stop\""));
+        assert!(json.contains("\"suppressOutput\":true"));
+        assert!(!json.contains("stop_reason"));
+        assert!(!json.contains("suppress_output"));
     }
 }
