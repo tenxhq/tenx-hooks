@@ -49,4 +49,3 @@ mod tests {
         assert!(matches!(error(2), Err(Error::InvalidExitCode(2))));
     }
 }
-

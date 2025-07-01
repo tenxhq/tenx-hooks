@@ -38,34 +38,30 @@ tenx-hooks = "0.0.1"
 Here's a simple hook that validates Bash commands before execution:
 
 ```rust
-use tenx_hooks::{Hook, PreToolUseOutput, Decision, Result};
+use tenx_hooks::{Hook, output::PreToolUseOutput, Result};
 
 fn main() -> Result<()> {
     let hook = Hook::new();
     
     // Read and parse the PreToolUse input
-    let input = hook.pre_tool_use()?;
+    let input = hook.pre_tooluse()?;
     
     if input.tool_name == "Bash" {
         if let Some(command) = input.tool_input.get("command").and_then(|v| v.as_str()) {
             if command.contains("rm -rf") {
-                // Block the operation with a reason
-                hook.respond(PreToolUseOutput {
-                    decision: Some(Decision::Block),
-                    reason: Some("Dangerous command detected: rm -rf is not allowed".to_string()),
-                    ..Default::default()
-                })?;
+                // Block the operation with builder chaining
+                hook.respond(
+                    PreToolUseOutput::block("Dangerous command detected")
+                        .stop("Critical security violation")
+                        .suppress_output(true)
+                )?;
                 return Ok(());
             }
         }
     }
     
     // Approve the operation
-    hook.respond(PreToolUseOutput {
-        decision: Some(Decision::Approve),
-        reason: Some("Command validated".to_string()),
-        ..Default::default()
-    })?;
+    hook.respond(PreToolUseOutput::approve("Command validated"))?;
     
     Ok(())
 }
@@ -79,21 +75,19 @@ fn main() -> Result<()> {
 Runs before tool execution. Can approve or block the operation.
 
 ```rust
-use tenx_hooks::{Hook, PreToolUseOutput, Decision, Result};
+use tenx_hooks::{Hook, output::PreToolUseOutput, Result};
 
 fn main() -> Result<()> {
     let hook = Hook::new();
-    let input = hook.pre_tool_use()?;
+    let input = hook.pre_tooluse()?;
     
     // Block file writes to protected directories
     if input.tool_name == "Write" {
         if let Some(path) = input.tool_input.get("file_path").and_then(|v| v.as_str()) {
             if path.starts_with("/etc/") {
-                hook.respond(PreToolUseOutput {
-                    decision: Some(Decision::Block),
-                    reason: Some("Cannot write to system directories".to_string()),
-                    ..Default::default()
-                })?;
+                hook.respond(
+                    PreToolUseOutput::block("Cannot write to system directories")
+                )?;
                 return Ok(());
             }
         }
@@ -176,6 +170,52 @@ fn main() -> Result<()> {
     
     Ok(())
 }
+```
+
+## Builder Pattern
+
+The output types support a fluent builder pattern for easy construction:
+
+```rust
+// Simple approval or block
+PreToolUseOutput::approve("OK")
+PreToolUseOutput::block("Not allowed")
+
+// Chain multiple operations
+PreToolUseOutput::block("Error detected")
+    .stop("Fatal error - halting execution")
+    .suppress_output(true)
+
+// Modify existing outputs
+let output = PreToolUseOutput::approve("Initially OK")
+    .with_reason("Actually, let me explain...")
+    .suppress_output(false);
+
+// Clear fields
+let output = PreToolUseOutput::block("Error")
+    .without_reason();  // Removes the reason
+
+// PostToolUse examples
+PostToolUseOutput::new()
+    .stop("Tests are failing")
+    .suppress_output(true)
+
+PostToolUseOutput::block("Linting errors found")
+    .stop("Please fix before continuing")
+
+// NotificationOutput examples  
+NotificationOutput::new()
+    .suppress_output(true)  // Handle notification silently
+
+NotificationOutput::new()
+    .stop("Critical error in notification handler")
+
+// StopOutput examples
+StopOutput::block("Cannot stop - tests still running")
+    .suppress_output(false)
+
+StopOutput::new()  // Allow stop
+    .suppress_output(true)
 ```
 
 ## Output Types
@@ -285,6 +325,19 @@ fn main() -> Result<()> {
     hook.respond(PreToolUseOutput::approve("Style check passed"))?;
     Ok(())
 }
+```
+
+## Examples
+
+Check out the [examples directory](examples/) for complete working examples:
+
+- **[precheck.rs](examples/precheck.rs)** - Basic hook that approves all operations
+- **[bash_validator.rs](examples/bash_validator.rs)** - Validates and blocks dangerous Bash commands
+- **[file_guard.rs](examples/file_guard.rs)** - Protects sensitive files from modification
+
+Run examples with:
+```bash
+cargo run --example precheck < examples/test_input.json
 ```
 
 ## Related
