@@ -1,22 +1,15 @@
-use tenx_hooks::{PreToolUse, output::PreToolUseOutput};
+use tenx_hooks::{Hook, Result, output::PreToolUseOutput};
 
-fn main() {
-    let input = r#"{
-        "session_id": "test-session",
-        "transcript_path": "/tmp/transcript.json",
-        "tool_name": "Bash",
-        "tool_input": {
-            "command": "echo 'Hello, World!'"
-        }
-    }"#;
+fn main() -> Result<()> {
+    let hook = Hook::new();
+    let input = hook.pre_tooluse()?;
 
-    let pre_tool_use: PreToolUse = serde_json::from_str(input).unwrap();
-    println!("Parsed tool: {}", pre_tool_use.tool_name);
-    println!(
-        "Tool input: {}",
-        serde_json::to_string(&pre_tool_use.tool_input).unwrap()
-    );
+    // Log some info to stderr for debugging (won't interfere with JSON output)
+    eprintln!("Hook received tool: {}", input.tool_name);
+    eprintln!("Session ID: {}", input.session_id);
 
     let approval = PreToolUseOutput::approve("Command looks safe");
-    println!("Result: {}", serde_json::to_string(&approval).unwrap());
+    hook.respond(approval)?;
+
+    Ok(())
 }
