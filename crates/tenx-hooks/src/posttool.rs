@@ -108,18 +108,6 @@ impl PostToolUseOutput {
         self.suppress_output = Some(suppress);
         self
     }
-
-    /// Set a custom reason (overwrites the one from block)
-    pub fn with_reason(mut self, reason: &str) -> Self {
-        self.reason = Some(reason.to_string());
-        self
-    }
-
-    /// Clear the reason
-    pub fn without_reason(mut self) -> Self {
-        self.reason = None;
-        self
-    }
 }
 
 impl HookResponse for PostToolUseOutput {}
