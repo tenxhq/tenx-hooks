@@ -108,7 +108,7 @@ impl PreToolUseOutput {
 
     /// Create a passthrough response that defers to Claude's regular approval flow
     ///
-    /// This omits the decision field, allowing the agent to show an approval 
+    /// This omits the decision field, allowing the agent to show an approval
     /// dialogue or proceed based on its configuration.
     pub fn passthrough() -> Self {
         Self::default()
