@@ -5,36 +5,41 @@
 //! behavior, ensuring certain actions always happen rather than relying on the LLM
 //! to choose to run them.
 //!
+//! This library implements the JSON-based hook protocol used by Claude Code only, avoiding the
+//! less well-defined error code protocol. This means tenx-hooks tools always exit with status code
+//! 0, and return well-formed JSON responses.
+//!
 //! # Example
 //!
 //! ```rust,no_run
-//! use tenx_hooks::{Hook, output::PreToolUseOutput, Result};
+//! use tenx_hooks::{HookResponse, Input, PreToolUse, PreToolUseOutput, Result};
 //!
 //! fn main() -> Result<()> {
-//!     let hook = Hook::new();
-//!     let input = hook.pre_tooluse()?;
+//!     let input = PreToolUse::read()?;
 //!     
 //!     if input.tool_name == "Bash" {
 //!         if let Some(command) = input.tool_input.get("command").and_then(|v| v.as_str()) {
 //!             if command.contains("rm -rf") {
-//!                 hook.respond(PreToolUseOutput::block("Dangerous command detected"))?;
-//!                 return Ok(());
+//!                 PreToolUseOutput::block("Dangerous command detected").respond();
 //!             }
 //!         }
 //!     }
 //!     
-//!     hook.respond(PreToolUseOutput::approve("Command validated"))?;
-//!     Ok(())
+//!     PreToolUseOutput::approve("Command validated").respond();
 //! }
 //! ```
 
 mod error;
 mod hook;
 mod input;
+mod pretool;
+mod response;
 
 pub mod exit;
 pub mod output;
 
 pub use error::{Error, Result};
 pub use hook::Hook;
-pub use input::*;
+pub use input::{Input, Notification, PostToolUse, Stop};
+pub use pretool::{PreToolUse, PreToolUseOutput};
+pub use response::HookResponse;

@@ -1,15 +1,11 @@
-use tenx_hooks::{Hook, Result, output::PreToolUseOutput};
+use tenx_hooks::{HookResponse, Input, PreToolUse, Result};
 
 fn main() -> Result<()> {
-    let hook = Hook::new();
-    let input = hook.pre_tooluse()?;
+    let input = PreToolUse::read()?;
 
     // Log some info to stderr for debugging (won't interfere with JSON output)
     eprintln!("Hook received tool: {}", input.tool_name);
     eprintln!("Session ID: {}", input.session_id);
 
-    let approval = PreToolUseOutput::approve("Command looks safe");
-    hook.respond(approval)?;
-
-    Ok(())
+    input.approve("Command looks safe").respond();
 }

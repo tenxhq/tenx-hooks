@@ -1,23 +1,8 @@
+use crate::error::Result;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
-
-/// Input structure for PreToolUse hooks.
-///
-/// PreToolUse hooks run after Claude creates tool parameters but before
-/// processing the tool call. They can approve or block the operation.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct PreToolUse {
-    /// Unique identifier for the current Claude Code session
-    pub session_id: String,
-    /// Path to the conversation transcript JSON file
-    pub transcript_path: String,
-    /// Name of the tool being called (e.g., "Bash", "Write", "Edit")
-    pub tool_name: String,
-    /// Tool-specific input parameters. The exact schema depends on the tool.
-    pub tool_input: HashMap<String, Value>,
-}
+use std::io::{self, Read as IoRead};
 
 /// Input structure for PostToolUse hooks.
 ///
@@ -72,3 +57,32 @@ pub struct Stop {
     /// Check this to prevent infinite loops.
     pub stop_hook_active: bool,
 }
+
+/// Trait for hook input types that can be read from stdin.
+///
+/// This trait provides a standard way to read hook inputs by:
+/// 1. Reading all content from stdin
+/// 2. Parsing it as JSON
+/// 3. Deserializing to the appropriate type
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use tenx_hooks::{Input, PreToolUse};
+///
+/// let input = PreToolUse::read().expect("Failed to read input");
+/// println!("Tool name: {}", input.tool_name);
+/// ```
+pub trait Input: for<'de> Deserialize<'de> + Sized {
+    /// Read and parse input from stdin.
+    fn read() -> Result<Self> {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer)?;
+        let parsed = serde_json::from_str(&buffer)?;
+        Ok(parsed)
+    }
+}
+
+impl Input for PostToolUse {}
+impl Input for Notification {}
+impl Input for Stop {}

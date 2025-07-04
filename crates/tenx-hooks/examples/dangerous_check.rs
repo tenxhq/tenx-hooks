@@ -1,10 +1,8 @@
-use tenx_hooks::{Hook, Result, output::PreToolUseOutput};
+use tenx_hooks::{HookResponse, Input, PreToolUse, PreToolUseOutput, Result};
 
 fn main() -> Result<()> {
-    let hook = Hook::new();
-
     // Read PreToolUse input from stdin
-    let input = hook.pre_tooluse()?;
+    let input = PreToolUse::read()?;
 
     // Check if it's a Bash command
     if input.tool_name == "Bash" {
@@ -15,18 +13,13 @@ fn main() -> Result<()> {
                 || command.contains(":(){ :|:& };:")
             {
                 eprintln!("Dangerous command detected: {command}");
-                let response = PreToolUseOutput::block(
+                PreToolUseOutput::block(
                     "This command appears to be dangerous and has been blocked for safety.",
-                );
-                hook.respond(response)?;
-                return Ok(());
+                )
+                .respond();
             }
         }
     }
 
-    // Otherwise approve
-    let approval = PreToolUseOutput::approve("Command validated and approved");
-    hook.respond(approval)?;
-
-    Ok(())
+    input.approve("Command validated and approved").respond();
 }

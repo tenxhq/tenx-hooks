@@ -1,5 +1,6 @@
 use crate::error::Result;
-use crate::input::{Notification, PostToolUse, PreToolUse, Stop};
+use crate::input::{Notification, PostToolUse, Stop};
+use crate::pretool::PreToolUse;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 
