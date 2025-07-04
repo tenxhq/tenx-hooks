@@ -32,6 +32,7 @@
 mod error;
 mod io;
 mod notification;
+pub mod parse;
 mod posttool;
 mod pretool;
 mod stop;

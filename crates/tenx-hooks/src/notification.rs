@@ -3,7 +3,8 @@ use std::fs;
 
 use crate::Result;
 use crate::io::{HookResponse, Input, TranscriptReader, is_none};
-use crate::transcript::{TranscriptEntry, parse_transcript};
+use crate::parse::parse_transcript;
+use crate::transcript::TranscriptEntry;
 
 /// Input structure for Notification hooks.
 ///

@@ -1,7 +1,5 @@
-use tenx_hooks::transcript::{
-    ContentBlock, MessageContent, TranscriptEntry, TranscriptMessage, parse_transcript_line,
-    parse_transcript_with_context,
-};
+use tenx_hooks::parse::{parse_transcript_line, parse_transcript_with_context};
+use tenx_hooks::transcript::{ContentBlock, MessageContent, TranscriptEntry, TranscriptMessage};
 
 #[test]
 fn test_tool_result_with_array_content() {
