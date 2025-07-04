@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::io::{HookResponse, Input, is_none};
 
+// The docs are wrong. Title is never used, but we have hook_event_name instead, apparently.
+// https://github.com/anthropics/claude-code/issues/2960
+
 /// Input structure for Notification hooks.
 ///
 /// Notification hooks run when Claude Code sends notifications, allowing
@@ -12,12 +15,17 @@ use crate::io::{HookResponse, Input, is_none};
 pub struct Notification {
     /// Unique identifier for the current Claude Code session
     pub session_id: String,
+
     /// Path to the conversation transcript JSON file
     pub transcript_path: String,
+
     /// The notification message content
     pub message: String,
+
     /// The notification title (typically "Claude Code")
-    pub title: String,
+    /// The docs are wrong. Title is never used, but we have hook_event_name instead, apparently.
+    /// https://github.com/anthropics/claude-code/issues/2960
+    pub hook_event_name: String,
 }
 
 impl Notification {
@@ -85,7 +93,7 @@ mod tests {
             session_id: "test-session".to_string(),
             transcript_path: "/path/to/transcript".to_string(),
             message: "Claude needs permission to run a command".to_string(),
-            title: "Claude Code".to_string(),
+            hook_event_name: "Claude Code".to_string(),
         };
 
         // Test passthrough response
