@@ -42,7 +42,10 @@ pub struct AssistantEntry {
     pub user_type: String,
     pub is_sidechain: bool,
     pub parent_uuid: String,
-    pub request_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_api_error_message: Option<bool>,
 }
 
 /// Summary entry
@@ -68,8 +71,8 @@ pub struct SystemEntry {
     pub parent_uuid: String,
     pub is_meta: bool,
     pub level: String,
-    #[serde(rename = "toolUseID")]
-    pub tool_use_id: String,
+    #[serde(rename = "toolUseID", skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
 }
 
 /// Message can be either from a user or an assistant
@@ -144,6 +147,7 @@ impl MessageContent {
                             .collect::<Vec<_>>()
                             .join(" "),
                     },
+                    ContentBlock::Thinking { thinking, .. } => thinking.clone(),
                 })
                 .collect::<Vec<_>>()
                 .join(" "),
@@ -214,6 +218,11 @@ pub enum ContentBlock {
         content: ToolResultContent,
         #[serde(skip_serializing_if = "Option::is_none")]
         is_error: Option<bool>,
+    },
+    Thinking {
+        thinking: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        signature: Option<String>,
     },
 }
 

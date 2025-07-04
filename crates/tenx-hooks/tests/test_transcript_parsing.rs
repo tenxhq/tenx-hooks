@@ -25,21 +25,37 @@ fn test_tool_result_with_array_content() {
 
 #[test]
 fn test_parse_various_entry_types() {
-    // Test system entry
+    // Test system entry with toolUseID
     let system_json = r#"{"type":"system","uuid":"sys-uuid","timestamp":"2025-01-01T00:00:00Z","content":"test content","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","isMeta":false,"level":"info","toolUseID":"tool-123"}"#;
-    let system_entry = parse_transcript_line(system_json).expect("Should parse system entry");
+    let system_entry =
+        parse_transcript_line(system_json).expect("Should parse system entry with toolUseID");
     assert!(matches!(system_entry, TranscriptEntry::System(_)));
+
+    // Test system entry without toolUseID (like the error example)
+    let system_json_no_tool = r#"{"type":"system","uuid":"sys-uuid","timestamp":"2025-01-01T00:00:00Z","content":"test content","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","isMeta":false,"level":"warning"}"#;
+    let system_entry_no_tool = parse_transcript_line(system_json_no_tool)
+        .expect("Should parse system entry without toolUseID");
+    assert!(matches!(system_entry_no_tool, TranscriptEntry::System(_)));
 
     // Test user entry
     let user_json = r#"{"type":"user","message":{"role":"user","content":"hello"},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":null}"#;
     let user_entry = parse_transcript_line(user_json).expect("Should parse user entry");
     assert!(matches!(user_entry, TranscriptEntry::User(_)));
 
-    // Test assistant entry
+    // Test assistant entry with requestId
     let assistant_json = r#"{"type":"assistant","message":{"id":"msg_123","type":"message","role":"assistant","model":"test-model","content":"hello back","stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":2,"service_tier":"standard"}},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
     let assistant_entry =
-        parse_transcript_line(assistant_json).expect("Should parse assistant entry");
+        parse_transcript_line(assistant_json).expect("Should parse assistant entry with requestId");
     assert!(matches!(assistant_entry, TranscriptEntry::Assistant(_)));
+
+    // Test assistant entry without requestId (like API error messages)
+    let assistant_json_no_req = r#"{"type":"assistant","message":{"id":"msg_123","type":"message","role":"assistant","model":"test-model","content":"API error","stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":2,"service_tier":"standard"}},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123"}"#;
+    let assistant_entry_no_req = parse_transcript_line(assistant_json_no_req)
+        .expect("Should parse assistant entry without requestId");
+    assert!(matches!(
+        assistant_entry_no_req,
+        TranscriptEntry::Assistant(_)
+    ));
 
     // Test summary entry - Summary doesn't have CommonFields, just summary and optional leafUuid
     let summary_json = r#"{"type":"summary","summary":"Test summary","leafUuid":"leaf-123"}"#;
@@ -107,6 +123,78 @@ fn test_tool_uses_parsing() {
             }
             _ => panic!("Expected assistant message type"),
         },
+        _ => panic!("Expected assistant entry"),
+    }
+}
+
+#[test]
+fn test_system_entry_without_tool_use_id() {
+    // Test the specific error case from the user
+    let json_line = r#"{"parentUuid":"e37aed7f-cdda-4333-8c92-00a414d22fc8","isSidechain":false,"userType":"external","cwd":"/Users/cortesi/git/public/mcptool","sessionId":"781af6da-2cf7-4d2e-b727-c209ba16e259","version":"1.0.35","type":"system","content":"Claude Opus 4 limit reached, now using Sonnet 4","isMeta":false,"timestamp":"2025-06-28T03:14:56.367Z","uuid":"bd282060-4155-4b79-b87e-2c4e03902734","level":"warning"}"#;
+
+    let entry =
+        parse_transcript_line(json_line).expect("Should parse system entry without toolUseID");
+
+    match entry {
+        TranscriptEntry::System(system) => {
+            assert_eq!(
+                system.content,
+                "Claude Opus 4 limit reached, now using Sonnet 4"
+            );
+            assert_eq!(system.level, "warning");
+            assert!(system.tool_use_id.is_none());
+        }
+        _ => panic!("Expected system entry"),
+    }
+}
+
+#[test]
+fn test_assistant_api_error_without_request_id() {
+    // Test the specific API error case from the user
+    let json_line = r#"{"parentUuid":"77e08109-515a-4538-96aa-0533e9e8919e","isSidechain":false,"userType":"external","cwd":"/Users/cortesi/git/public/mcptool","sessionId":"781af6da-2cf7-4d2e-b727-c209ba16e259","version":"1.0.35","type":"assistant","uuid":"b2c32dfb-4626-470b-b313-c536efa975d5","timestamp":"2025-06-28T03:42:56.171Z","message":{"id":"a764c94f-cfc2-485d-b638-cd511a0da54e","model":"<synthetic>","role":"assistant","stop_reason":"stop_sequence","stop_sequence":"","type":"message","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"server_tool_use":{"web_search_requests":0},"service_tier":null},"content":[{"type":"text","text":"API Error: Request was aborted."}]},"isApiErrorMessage":true}"#;
+
+    let entry = parse_transcript_line(json_line)
+        .expect("Should parse assistant API error without requestId");
+
+    match entry {
+        TranscriptEntry::Assistant(assistant) => {
+            assert!(assistant.request_id.is_none());
+            assert_eq!(assistant.is_api_error_message, Some(true));
+            // Verify it's an API error message
+            match &assistant.message {
+                TranscriptMessage::Assistant { content, .. } => {
+                    assert!(content.is_some());
+                    let text = content.as_ref().unwrap().as_text();
+                    assert!(text.contains("API Error"));
+                }
+                _ => panic!("Expected assistant message type"),
+            }
+        }
+        _ => panic!("Expected assistant entry"),
+    }
+}
+
+#[test]
+fn test_assistant_thinking_content() {
+    // Test the specific thinking content case from the user
+    let json_line = r#"{"parentUuid":"b61aa179-3293-4026-9f56-3d3669621915","isSidechain":false,"userType":"external","cwd":"/Users/cortesi/git/private/canopy","sessionId":"10e2a7a3-ff7d-413a-b4d4-b54fd440b090","version":"1.0.39","message":{"id":"msg_01Ha7YGwaRoKNPpeYig9SAr8","type":"message","role":"assistant","model":"claude-opus-4-20250514","content":[{"type":"thinking","thinking":"The user wants me to:\n1. Clean up the indenting with a helper function\n2. Include the node ID in the output\n\nLooking at the current dump.rs, I can see there's repetitive code for writing indented lines. I can create a helper function to handle the indentation and writing pattern. Also, I need to get the node ID and include it in the output.","signature":"EoAECkYIBRgCKkDGpUVzdwzTX0wl8BMZ+btk3WGIxcqPofkqRQSXTEvzT+OQbe5ukmDmTZljZoeudDXlxGalb3n28g+zv9gOCkCzEgzBeH8g0k2vlikw164aDCBLG+10q1rtCxCy/CIwW96aSkgqmOeUPHc7p3QIWub2ebnpWkg1njXRN3V3uA5S736H0I5aM/u2aMp6HZhfKucCpJvqJswdXjoNwX8KLMj2UmCdwNnLNWdqcQGGkhhqvdl8DUcwm3RRZo4phDWKLf0it3W/fEEpW8a6Qw75XG2cHmsjP2+727QTECoVnlhTRc2WbV7rmb8Zj6IjdNk924gdb9sgmBzIrY39cpEj1GrgEkDv+dgr2EK7n2j2HWcBGGyYtsZ2aUEGpv/MEvMDTU+zBFwvpUX/ROo05knnQ5s1xKxvkl2Pm06p6mABpqNos+50ez4P+Z3FkUNYBDaP1qgdTXX9cMSD+4KnULPrYmcI0HQW2MnA+6Den3Lgr5w0k18YU6TQopp6021lR04gFyRV/6N+MUCO0bQ5e3JvJUsgJu8ODyEBNV9jeyn8VIp1LeQR8TWtF0OmoxcYb5KjoDKRUDj4SogbUUydiyoYrrqW9KTUBGZ69jTfg3LnPkdsrS/KJ9Y1GftY0jrNrZs6xDyHjxDoRt8C/Tbaum+U9XCfEJjZRu7sz60YAQ=="}],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":10,"cache_creation_input_tokens":79478,"cache_read_input_tokens":13884,"output_tokens":7,"service_tier":"standard"}},"requestId":"req_011CQhJZyUbEVot2FFd6XPkn","type":"assistant","uuid":"097f1ac1-7017-4e6e-a415-041d4be97072","timestamp":"2025-07-02T01:12:52.249Z"}"#;
+
+    let entry = parse_transcript_line(json_line)
+        .expect("Should parse assistant entry with thinking content");
+
+    match entry {
+        TranscriptEntry::Assistant(assistant) => {
+            assert!(assistant.request_id.is_some());
+            // Verify thinking content
+            match &assistant.message {
+                TranscriptMessage::Assistant { content, .. } => {
+                    assert!(content.is_some());
+                    let text = content.as_ref().unwrap().as_text();
+                    assert!(text.contains("Clean up the indenting"));
+                }
+                _ => panic!("Expected assistant message type"),
+            }
+        }
         _ => panic!("Expected assistant entry"),
     }
 }

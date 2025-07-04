@@ -158,11 +158,11 @@ enum Commands {
         #[arg(long)]
         transcript: Option<String>,
     },
-    /// Format and display a transcript file
+    /// Format and display transcript files
     #[command(name = "transcript")]
     Transcript {
-        /// Path to the transcript JSONL file
-        path: String,
+        /// Paths to the transcript JSONL files
+        paths: Vec<String>,
 
         /// Enable strict validation to check for missing fields
         #[arg(long)]
@@ -222,8 +222,8 @@ fn main() -> Result<()> {
             filepath,
             transcript,
         } => log::run_log_hook(event, filepath, transcript, color_mode),
-        Commands::Transcript { path, strict } => {
-            transcript::display_transcript(path, color_mode, strict)
+        Commands::Transcript { paths, strict } => {
+            transcript::display_transcripts(paths, color_mode, strict)
         }
     }
 }

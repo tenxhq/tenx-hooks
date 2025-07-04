@@ -3,7 +3,43 @@ use anyhow::Result;
 use std::fs;
 use tenx_hooks::transcript::{TranscriptEntry, parse_transcript_with_context};
 
-pub fn display_transcript(path: String, color_mode: ColorMode, strict: bool) -> Result<()> {
+pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, strict: bool) -> Result<()> {
+    if paths.is_empty() {
+        anyhow::bail!("No transcript files specified");
+    }
+
+    let multiple_files = paths.len() > 1;
+    let mut had_errors = false;
+
+    for (file_idx, path) in paths.iter().enumerate() {
+        if multiple_files {
+            // Print file header
+            if file_idx > 0 {
+                println!(); // Blank line between files
+            }
+            println!("\x1b[1;36m=== {path} ===\x1b[0m");
+        }
+
+        match display_single_transcript(path.clone(), color_mode, strict) {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("\x1b[91mError processing {path}: {e}\x1b[0m");
+                had_errors = true;
+                if strict {
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+
+    if had_errors && !strict {
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
+fn display_single_transcript(path: String, color_mode: ColorMode, strict: bool) -> Result<()> {
     let content = fs::read_to_string(&path)?;
     let highlighter = JsonHighlighter::new(color_mode);
 
@@ -132,4 +168,10 @@ pub fn print_entry_for_debugging(entry: &TranscriptEntry) -> Result<()> {
     let highlighter = JsonHighlighter::new(ColorMode::Auto);
     highlighter.print_json(&json)?;
     Ok(())
+}
+
+// Re-export for backwards compatibility
+#[allow(dead_code)]
+pub fn display_transcript(path: String, color_mode: ColorMode, strict: bool) -> Result<()> {
+    display_transcripts(vec![path], color_mode, strict)
 }
