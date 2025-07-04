@@ -17,40 +17,6 @@ pub enum Decision {
     Block,
 }
 
-/// Output structure for Notification hooks.
-///
-/// Controls continuation and output visibility for notification handling.
-#[derive(Debug, Serialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct NotificationOutput {
-    /// Whether Claude should continue after hook execution (default: true)
-    #[serde(rename = "continue", skip_serializing_if = "is_none")]
-    pub continue_: Option<bool>,
-
-    /// Message shown to user when continue is false
-    #[serde(skip_serializing_if = "is_none")]
-    pub stop_reason: Option<String>,
-
-    /// Hide output from transcript mode (default: false)
-    #[serde(skip_serializing_if = "is_none")]
-    pub suppress_output: Option<bool>,
-}
-
-impl NotificationOutput {
-    /// Set the continue field to false and provide a stop reason
-    pub fn stop(mut self, reason: &str) -> Self {
-        self.continue_ = Some(false);
-        self.stop_reason = Some(reason.to_string());
-        self
-    }
-
-    /// Set whether to suppress output in transcript mode
-    pub fn suppress_output(mut self, suppress: bool) -> Self {
-        self.suppress_output = Some(suppress);
-        self
-    }
-}
-
 /// Output structure for Stop hooks.
 ///
 /// Controls whether Claude can stop or must continue processing.
@@ -114,17 +80,6 @@ mod tests {
         let output = StopOutput::block("Must continue");
         assert!(matches!(output.decision, Some(Decision::Block)));
         assert_eq!(output.reason, Some("Must continue".to_string()));
-    }
-
-    #[test]
-    fn test_notification_output_builder() {
-        let output = NotificationOutput::default()
-            .stop("error occurred")
-            .suppress_output(true);
-
-        assert_eq!(output.continue_, Some(false));
-        assert_eq!(output.stop_reason, Some("error occurred".to_string()));
-        assert_eq!(output.suppress_output, Some(true));
     }
 
     #[test]

@@ -2,24 +2,6 @@ use crate::error::Result;
 use serde::Deserialize;
 use std::io::{self, Read as IoRead};
 
-/// Input structure for Notification hooks.
-///
-/// Notification hooks run when Claude Code sends notifications, allowing
-/// you to customize how you receive alerts (e.g., when Claude needs input
-/// or permission to run something).
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct Notification {
-    /// Unique identifier for the current Claude Code session
-    pub session_id: String,
-    /// Path to the conversation transcript JSON file
-    pub transcript_path: String,
-    /// The notification message content
-    pub message: String,
-    /// The notification title (typically "Claude Code")
-    pub title: String,
-}
-
 /// Input structure for Stop hooks.
 ///
 /// Stop hooks run when Claude Code has finished responding. They can
@@ -61,5 +43,4 @@ pub trait Input: for<'de> Deserialize<'de> + Sized {
     }
 }
 
-impl Input for Notification {}
 impl Input for Stop {}

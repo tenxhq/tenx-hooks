@@ -31,6 +31,7 @@
 
 mod error;
 mod input;
+mod notification;
 mod posttool;
 mod pretool;
 mod response;
@@ -39,7 +40,8 @@ pub mod exit;
 pub mod output;
 
 pub use error::{Error, Result};
-pub use input::{Input, Notification, Stop};
+pub use input::{Input, Stop};
+pub use notification::{Notification, NotificationOutput};
 pub use posttool::{PostToolUse, PostToolUseOutput};
 pub use pretool::{PreToolUse, PreToolUseOutput};
 pub use response::HookResponse;
