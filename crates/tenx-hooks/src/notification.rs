@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::input::Input;
-use crate::output::is_none;
-use crate::response::HookResponse;
+use crate::io::{HookResponse, Input, is_none};
 
 /// Input structure for Notification hooks.
 ///

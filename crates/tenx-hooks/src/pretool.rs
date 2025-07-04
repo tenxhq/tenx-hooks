@@ -2,9 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::input::Input;
-use crate::output::{Decision, is_none};
-use crate::response::HookResponse;
+use crate::io::{Decision, HookResponse, Input, is_none};
 
 /// Input structure for PreToolUse hooks.
 ///
