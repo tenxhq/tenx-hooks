@@ -31,7 +31,7 @@ fn test_find_missing_fields() {
         }
     });
     let parsed = raw.clone();
-    let missing = find_missing_fields(&raw, &parsed, vec![]);
+    let missing = find_missing_fields(&raw, &parsed, &[]);
     assert!(missing.is_empty());
 
     // Test case 2: Missing field at root level
@@ -48,7 +48,7 @@ fn test_find_missing_fields() {
             "content": "hello"
         }
     });
-    let missing = find_missing_fields(&raw, &parsed, vec![]);
+    let missing = find_missing_fields(&raw, &parsed, &[]);
     assert_eq!(missing, vec!["unknownField"]);
 
     // Test case 3: Missing nested field
@@ -65,7 +65,7 @@ fn test_find_missing_fields() {
             "content": "hello"
         }
     });
-    let missing = find_missing_fields(&raw, &parsed, vec![]);
+    let missing = find_missing_fields(&raw, &parsed, &[]);
     assert_eq!(missing, vec!["message.unknownNested"]);
 
     // Test case 4: Arrays with missing fields
@@ -81,7 +81,7 @@ fn test_find_missing_fields() {
             {"id": 2, "name": "item2"}
         ]
     });
-    let missing = find_missing_fields(&raw, &parsed, vec![]);
+    let missing = find_missing_fields(&raw, &parsed, &[]);
     assert_eq!(missing, vec!["items.[0].extra"]);
 }
 
@@ -172,13 +172,11 @@ fn test_strict_validation_with_summary_entry() {
     // These fields should be detected as missing from TranscriptEntry
     assert!(
         missing_fields.contains(&"summary".to_string()),
-        "Should detect missing 'summary' field, got: {:?}",
-        missing_fields
+        "Should detect missing 'summary' field, got: {missing_fields:?}"
     );
     assert!(
         missing_fields.contains(&"leafUuid".to_string()),
-        "Should detect missing 'leafUuid' field, got: {:?}",
-        missing_fields
+        "Should detect missing 'leafUuid' field, got: {missing_fields:?}"
     );
 }
 
@@ -236,8 +234,7 @@ fn test_strict_validation_with_known_fields_only() {
         let missing_fields = validate_transcript_entry(entry).expect("Validation should succeed");
         assert!(
             missing_fields.is_empty(),
-            "Entry should have no missing fields, but found: {:?}",
-            missing_fields
+            "Entry should have no missing fields, but found: {missing_fields:?}"
         );
     }
 }

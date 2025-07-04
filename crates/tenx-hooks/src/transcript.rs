@@ -27,6 +27,34 @@ pub struct TranscriptEntry {
     pub token_usage: Option<TokenUsage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_sidechain: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_uuid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leaf_uuid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_meta: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "toolUseID")]
+    pub tool_use_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_use_result: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -40,7 +68,6 @@ pub enum TranscriptEntryType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct TranscriptMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<MessageContent>,
@@ -50,6 +77,20 @@ pub struct TranscriptMessage {
     pub tool_uses: Option<Vec<ToolUse>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_outputs: Option<Vec<CodeOutput>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop_sequence: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub message_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<UsageInfo>,
 }
 
 /// Content can be either a simple string or an array of content blocks
@@ -146,6 +187,8 @@ pub enum ContentBlock {
     ToolResult {
         tool_use_id: String,
         content: ToolResultContent,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_error: Option<bool>,
     },
 }
 
@@ -177,6 +220,89 @@ pub struct TokenUsage {
     pub output_tokens: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_tokens: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsageInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_creation_input_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_read_input_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_tier: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ToolUseResultValue {
+    String(String),
+    ToolResult(ToolUseResultStruct),
+    FileRead(FileReadResult),
+    FileOperation(FileOperationResult),
+    Other(Value),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileReadResult {
+    #[serde(rename = "type")]
+    pub result_type: String,
+    pub file: FileInfo,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolUseResultStruct {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<Vec<ToolResultItem>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_duration_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_tool_use_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<UsageInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub was_interrupted: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileOperationResult {
+    #[serde(rename = "type")]
+    pub operation_type: Option<String>,
+    #[serde(rename = "filePath")]
+    pub file_path: Option<String>,
+    pub content: Option<String>,
+    #[serde(rename = "structuredPatch")]
+    pub structured_patch: Option<Vec<Value>>,
+    pub file: Option<FileInfo>,
+    #[serde(rename = "oldString")]
+    pub old_string: Option<String>,
+    #[serde(rename = "newString")]
+    pub new_string: Option<String>,
+    #[serde(rename = "originalFile")]
+    pub original_file: Option<String>,
+    #[serde(rename = "userModified")]
+    pub user_modified: Option<bool>,
+    #[serde(rename = "replaceAll")]
+    pub replace_all: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileInfo {
+    #[serde(rename = "filePath")]
+    pub file_path: Option<String>,
+    pub content: Option<String>,
+    #[serde(rename = "numLines")]
+    pub num_lines: Option<u32>,
+    #[serde(rename = "startLine")]
+    pub start_line: Option<u32>,
+    #[serde(rename = "totalLines")]
+    pub total_lines: Option<u32>,
 }
 
 /// Error type for transcript parsing with detailed context
@@ -391,22 +517,67 @@ pub fn parse_transcript_with_raw(content: &str) -> TranscriptParseResultWithRaw 
     TranscriptParseResultWithRaw { entries, errors }
 }
 
+/// Convert snake_case to camelCase
+fn to_camel_case(s: &str) -> String {
+    let mut result = String::new();
+    let mut capitalize_next = false;
+
+    for ch in s.chars() {
+        if ch == '_' {
+            capitalize_next = true;
+        } else if capitalize_next {
+            result.push(ch.to_uppercase().next().unwrap());
+            capitalize_next = false;
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
 /// Compare two JSON values recursively to find fields that exist in `raw` but not in `parsed`
-pub fn find_missing_fields(raw: &Value, parsed: &Value, path: Vec<String>) -> Vec<String> {
+pub fn find_missing_fields(raw: &Value, parsed: &Value, path: &[String]) -> Vec<String> {
     let mut missing_fields = Vec::new();
 
     match (raw, parsed) {
         (Value::Object(raw_map), Value::Object(parsed_map)) => {
             // Check each field in raw
             for (key, raw_value) in raw_map {
-                let mut new_path = path.clone();
+                // Skip null values, empty arrays, and empty strings since they are often omitted by skip_serializing_if
+                if raw_value.is_null()
+                    || (raw_value.is_array() && raw_value.as_array().is_some_and(|a| a.is_empty()))
+                    || (raw_value.is_string() && raw_value.as_str().is_some_and(|s| s.is_empty()))
+                {
+                    continue;
+                }
+
+                let mut new_path = path.to_vec();
                 new_path.push(key.clone());
 
-                if let Some(parsed_value) = parsed_map.get(key) {
+                // Check for exact match first
+                let found = if let Some(parsed_value) = parsed_map.get(key) {
                     // Field exists in both, recurse
-                    missing_fields.extend(find_missing_fields(raw_value, parsed_value, new_path));
+                    missing_fields.extend(find_missing_fields(raw_value, parsed_value, &new_path));
+                    true
                 } else {
-                    // Field exists in raw but not in parsed
+                    // Try snake_case to camelCase conversion
+                    let camel_key = to_camel_case(key);
+                    if let Some(parsed_value) = parsed_map.get(&camel_key) {
+                        // Field exists with camelCase naming, recurse
+                        missing_fields.extend(find_missing_fields(
+                            raw_value,
+                            parsed_value,
+                            &new_path,
+                        ));
+                        true
+                    } else {
+                        false
+                    }
+                };
+
+                if !found {
+                    // Field exists in raw but not in parsed (even with case conversion)
                     let field_path = if new_path.is_empty() {
                         key.clone()
                     } else {
@@ -419,9 +590,9 @@ pub fn find_missing_fields(raw: &Value, parsed: &Value, path: Vec<String>) -> Ve
         (Value::Array(raw_arr), Value::Array(parsed_arr)) => {
             // For arrays, check each element
             for (i, (raw_elem, parsed_elem)) in raw_arr.iter().zip(parsed_arr.iter()).enumerate() {
-                let mut new_path = path.clone();
+                let mut new_path = path.to_vec();
                 new_path.push(format!("[{i}]"));
-                missing_fields.extend(find_missing_fields(raw_elem, parsed_elem, new_path));
+                missing_fields.extend(find_missing_fields(raw_elem, parsed_elem, &new_path));
             }
         }
         _ => {
@@ -446,7 +617,7 @@ pub fn validate_transcript_entry(
     let parsed_value: Value = serde_json::from_str(&entry_json)?;
 
     // Find missing fields
-    let missing_fields = find_missing_fields(&raw_value, &parsed_value, Vec::new());
+    let missing_fields = find_missing_fields(&raw_value, &parsed_value, &[]);
 
     Ok(missing_fields)
 }
