@@ -145,7 +145,7 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         hook_args: Vec<String>,
     },
-    /// Log a hook event to a file
+    /// Read an event from stdin and appendit to a JSONL log file
     #[command(name = "log")]
     Log {
         /// Event type to log (pretool, posttool, notification, stop, subagentstop)

@@ -29,7 +29,7 @@ pub struct TranscriptEntry {
     pub status: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum TranscriptEntryType {
     System,
@@ -67,10 +67,17 @@ impl MessageContent {
             MessageContent::Text(text) => text.clone(),
             MessageContent::Blocks(blocks) => blocks
                 .iter()
-                .filter_map(|b| match b {
-                    ContentBlock::Text { text, .. } => Some(text.as_str()),
-                    ContentBlock::ToolUse { name, .. } => Some(name.as_str()),
-                    ContentBlock::ToolResult { content, .. } => Some(content.as_str()),
+                .map(|b| match b {
+                    ContentBlock::Text { text, .. } => text.clone(),
+                    ContentBlock::ToolUse { name, .. } => name.clone(),
+                    ContentBlock::ToolResult { content, .. } => match content {
+                        ToolResultContent::Text(text) => text.clone(),
+                        ToolResultContent::Array(items) => items
+                            .iter()
+                            .map(|item| item.text.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                    },
                 })
                 .collect::<Vec<_>>()
                 .join(" "),
@@ -110,6 +117,21 @@ impl MessageContent {
     }
 }
 
+/// Tool result content can be either a string or an array of content items
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ToolResultContent {
+    Text(String),
+    Array(Vec<ToolResultItem>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolResultItem {
+    #[serde(rename = "type")]
+    pub item_type: String,
+    pub text: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ContentBlock {
@@ -123,7 +145,7 @@ pub enum ContentBlock {
     },
     ToolResult {
         tool_use_id: String,
-        content: String,
+        content: ToolResultContent,
     },
 }
 
