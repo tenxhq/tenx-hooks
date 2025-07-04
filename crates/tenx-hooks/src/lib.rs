@@ -37,7 +37,6 @@ mod pretool;
 mod response;
 mod stop;
 
-pub mod exit;
 pub mod output;
 
 pub use error::{Error, Result};
