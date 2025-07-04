@@ -6,6 +6,7 @@ mod posttool;
 mod pretool;
 mod stop;
 mod subagent_stop;
+mod transcript;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -142,6 +143,16 @@ enum Commands {
 
         /// File path to write the log
         filepath: String,
+
+        /// Optional path to read and rewrite transcript
+        #[arg(long)]
+        transcript: Option<String>,
+    },
+    /// Format and display a transcript file
+    #[command(name = "transcript")]
+    Transcript {
+        /// Path to the transcript JSONL file
+        path: String,
     },
 }
 
@@ -185,6 +196,11 @@ fn main() -> Result<()> {
             active,
             hook_args,
         } => subagent_stop::run_subagent_stop_hook(sessionid, transcript, active, hook_args),
-        Commands::Log { event, filepath } => log::run_log_hook(event, filepath),
+        Commands::Log {
+            event,
+            filepath,
+            transcript,
+        } => log::run_log_hook(event, filepath, transcript),
+        Commands::Transcript { path } => transcript::display_transcript(path),
     }
 }

@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
+use std::fs;
 
-use crate::io::{HookResponse, Input, is_none};
+use crate::Result;
+use crate::io::{HookResponse, Input, TranscriptReader, is_none};
+use crate::transcript::{TranscriptEntry, parse_transcript};
 
 /// Input structure for Notification hooks.
 ///
@@ -40,6 +43,13 @@ impl Notification {
 }
 
 impl Input for Notification {}
+
+impl TranscriptReader for Notification {
+    fn read_transcript(&self) -> Result<Vec<TranscriptEntry>> {
+        let content = fs::read_to_string(&self.transcript_path)?;
+        Ok(parse_transcript(&content)?)
+    }
+}
 
 /// Output structure for Notification hooks.
 ///

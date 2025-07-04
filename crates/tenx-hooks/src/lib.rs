@@ -36,9 +36,10 @@ mod posttool;
 mod pretool;
 mod stop;
 mod subagent_stop;
+pub mod transcript;
 
 pub use error::{Error, Result};
-pub use io::{Decision, HookResponse, Input};
+pub use io::{Decision, HookResponse, Input, TranscriptReader};
 pub use notification::{Notification, NotificationOutput};
 pub use posttool::{PostToolUse, PostToolUseOutput};
 pub use pretool::{PreToolUse, PreToolUseOutput};

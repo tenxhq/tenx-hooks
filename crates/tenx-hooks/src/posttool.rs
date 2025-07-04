@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fs;
 
-use crate::io::{Decision, HookResponse, Input, is_none};
+use crate::Result;
+use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
+use crate::transcript::{TranscriptEntry, parse_transcript};
 
 /// Input structure for PostToolUse hooks.
 ///
@@ -41,6 +44,13 @@ impl PostToolUse {
 }
 
 impl Input for PostToolUse {}
+
+impl TranscriptReader for PostToolUse {
+    fn read_transcript(&self) -> Result<Vec<TranscriptEntry>> {
+        let content = fs::read_to_string(&self.transcript_path)?;
+        Ok(parse_transcript(&content)?)
+    }
+}
 
 /// Output structure for PostToolUse hooks.
 ///

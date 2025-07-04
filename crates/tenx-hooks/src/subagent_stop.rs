@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
+use std::fs;
 
-use crate::io::{Decision, HookResponse, Input, is_none};
+use crate::Result;
+use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
+use crate::transcript::{TranscriptEntry, parse_transcript};
 
 /// Input structure for SubagentStop hooks.
 ///
@@ -43,6 +46,13 @@ impl SubagentStop {
 }
 
 impl Input for SubagentStop {}
+
+impl TranscriptReader for SubagentStop {
+    fn read_transcript(&self) -> Result<Vec<TranscriptEntry>> {
+        let content = fs::read_to_string(&self.transcript_path)?;
+        Ok(parse_transcript(&content)?)
+    }
+}
 
 /// Output structure for SubagentStop hooks.
 ///
