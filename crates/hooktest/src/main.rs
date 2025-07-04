@@ -1,4 +1,5 @@
 mod execute;
+mod log;
 mod notification;
 mod output;
 mod posttool;
@@ -133,6 +134,15 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         hook_args: Vec<String>,
     },
+    /// Log a hook event to a file
+    #[command(name = "log")]
+    Log {
+        /// Event type to log (pretool, posttool, notification, stop, subagentstop)
+        event: String,
+
+        /// File path to write the log
+        filepath: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -175,5 +185,6 @@ fn main() -> Result<()> {
             active,
             hook_args,
         } => subagent_stop::run_subagent_stop_hook(sessionid, transcript, active, hook_args),
+        Commands::Log { event, filepath } => log::run_log_hook(event, filepath),
     }
 }
