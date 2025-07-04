@@ -72,30 +72,50 @@ pub struct SystemEntry {
     pub tool_use_id: String,
 }
 
+/// Message can be either from a user or an assistant
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TranscriptMessage {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<MessageContent>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_uses: Option<Vec<ToolUse>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code_outputs: Option<Vec<CodeOutput>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub role: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_sequence: Option<String>,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub message_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub usage: Option<UsageInfo>,
+#[serde(tag = "role", rename_all = "lowercase")]
+pub enum TranscriptMessage {
+    User {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        content: Option<MessageContent>,
+    },
+    Assistant {
+        id: String,
+        #[serde(rename = "type")]
+        message_type: String,
+        model: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        content: Option<MessageContent>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        thinking: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_uses: Option<Vec<ToolUse>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        code_outputs: Option<Vec<CodeOutput>>,
+        stop_reason: Option<String>,
+        stop_sequence: Option<String>,
+        usage: UsageInfo,
+    },
+}
+
+impl TranscriptMessage {
+    /// Get the content of the message regardless of type
+    pub fn content(&self) -> Option<&MessageContent> {
+        match self {
+            TranscriptMessage::User { content } => content.as_ref(),
+            TranscriptMessage::Assistant { content, .. } => content.as_ref(),
+        }
+    }
+
+    /// Get the role as a string
+    pub fn role(&self) -> &str {
+        match self {
+            TranscriptMessage::User { .. } => "user",
+            TranscriptMessage::Assistant { .. } => "assistant",
+        }
+    }
 }
 
 /// Content can be either a simple string or an array of content blocks
@@ -240,8 +260,7 @@ impl TranscriptEntry {
             TranscriptEntry::User(entry) => {
                 let preview = entry
                     .message
-                    .content
-                    .as_ref()
+                    .content()
                     .map(|c| {
                         let text = c.as_text();
                         let truncated = text.chars().take(50).collect::<String>();
@@ -255,43 +274,37 @@ impl TranscriptEntry {
                 format!("User: {preview}")
             }
             TranscriptEntry::Assistant(entry) => {
-                let has_thinking = entry.message.thinking.is_some();
+                match &entry.message {
+                    TranscriptMessage::Assistant {
+                        thinking,
+                        tool_uses,
+                        code_outputs,
+                        content,
+                        ..
+                    } => {
+                        let has_thinking = thinking.is_some();
 
-                // Count tool uses from both tool_uses field and content
-                let tool_uses_count = entry
-                    .message
-                    .tool_uses
-                    .as_ref()
-                    .map(|t| t.len())
-                    .unwrap_or(0);
+                        // Count tool uses from both tool_uses field and content
+                        let tool_uses_count = tool_uses.as_ref().map(|t| t.len()).unwrap_or(0);
+                        let content_tool_count =
+                            content.as_ref().map(|c| c.count_tool_uses()).unwrap_or(0);
+                        let total_tool_count = tool_uses_count + content_tool_count;
+                        let code_count = code_outputs.as_ref().map(|c| c.len()).unwrap_or(0);
 
-                let content_tool_count = entry
-                    .message
-                    .content
-                    .as_ref()
-                    .map(|c| c.count_tool_uses())
-                    .unwrap_or(0);
-
-                let total_tool_count = tool_uses_count + content_tool_count;
-
-                let code_count = entry
-                    .message
-                    .code_outputs
-                    .as_ref()
-                    .map(|c| c.len())
-                    .unwrap_or(0);
-
-                let mut parts = vec!["Assistant".to_string()];
-                if has_thinking {
-                    parts.push("with thinking".to_string());
+                        let mut parts = vec!["Assistant".to_string()];
+                        if has_thinking {
+                            parts.push("with thinking".to_string());
+                        }
+                        if total_tool_count > 0 {
+                            parts.push(format!("{total_tool_count} tool uses"));
+                        }
+                        if code_count > 0 {
+                            parts.push(format!("{code_count} code outputs"));
+                        }
+                        parts.join(": ")
+                    }
+                    _ => "Assistant: unexpected message type".to_string(),
                 }
-                if total_tool_count > 0 {
-                    parts.push(format!("{total_tool_count} tool uses"));
-                }
-                if code_count > 0 {
-                    parts.push(format!("{code_count} code outputs"));
-                }
-                parts.join(": ")
             }
             TranscriptEntry::Summary(entry) => {
                 format!("Summary: {}", &entry.summary)

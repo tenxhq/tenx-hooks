@@ -1,5 +1,5 @@
 use tenx_hooks::transcript::{
-    TranscriptEntry, parse_transcript_line, parse_transcript_with_context,
+    TranscriptEntry, TranscriptMessage, parse_transcript_line, parse_transcript_with_context,
 };
 
 #[test]
@@ -36,7 +36,7 @@ fn test_parse_various_entry_types() {
     assert!(matches!(user_entry, TranscriptEntry::User(_)));
 
     // Test assistant entry
-    let assistant_json = r#"{"type":"assistant","message":{"role":"assistant","content":"hello back"},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
+    let assistant_json = r#"{"type":"assistant","message":{"id":"msg_123","type":"message","role":"assistant","model":"test-model","content":"hello back","stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":2,"service_tier":"standard"}},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
     let assistant_entry =
         parse_transcript_line(assistant_json).expect("Should parse assistant entry");
     assert!(matches!(assistant_entry, TranscriptEntry::Assistant(_)));
@@ -52,7 +52,7 @@ fn test_parse_transcript_with_context_errors() {
     // Test with mixed valid and invalid lines
     let transcript_data = r#"{"type":"user","message":{"role":"user","content":"hello"},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":null}
 invalid json line
-{"type":"assistant","message":{"role":"assistant","content":"hi"},"uuid":"test-uuid2","timestamp":"2025-01-01T00:00:01Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}
+{"type":"assistant","message":{"id":"msg_124","type":"message","role":"assistant","model":"test-model","content":"hi","stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1,"service_tier":"standard"}},"uuid":"test-uuid2","timestamp":"2025-01-01T00:00:01Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}
 {"invalid": "missing type field"}
 {"type":"summary","summary":"Test summary","leafUuid":"leaf-123"}"#;
 
@@ -72,15 +72,20 @@ invalid json line
 #[test]
 fn test_complex_content_structures() {
     // Test with complex content array
-    let complex_json = r#"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Here's the code:"}],"thinking":"Let me write some code"},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
+    let complex_json = r#"{"type":"assistant","message":{"id":"msg_125","type":"message","role":"assistant","model":"test-model","content":[{"type":"text","text":"Here's the code:"}],"thinking":"Let me write some code","stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1,"service_tier":"standard"}},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
 
     let entry = parse_transcript_line(complex_json).expect("Should parse complex content");
 
     match entry {
-        TranscriptEntry::Assistant(assistant) => {
-            assert!(assistant.message.thinking.is_some());
-            assert!(assistant.message.content.is_some());
-        }
+        TranscriptEntry::Assistant(assistant) => match &assistant.message {
+            TranscriptMessage::Assistant {
+                thinking, content, ..
+            } => {
+                assert!(thinking.is_some());
+                assert!(content.is_some());
+            }
+            _ => panic!("Expected assistant message type"),
+        },
         _ => panic!("Expected assistant entry"),
     }
 }
@@ -88,17 +93,20 @@ fn test_complex_content_structures() {
 #[test]
 fn test_tool_uses_parsing() {
     // Test entry with tool uses
-    let tool_use_json = r#"{"type":"assistant","message":{"role":"assistant","content":"I'll help you with that.","tool_uses":[{"toolName":"bash","toolInput":{"command":"ls"},"toolOutput":"file1.txt\nfile2.txt"}]},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
+    let tool_use_json = r#"{"type":"assistant","message":{"id":"msg_126","type":"message","role":"assistant","model":"test-model","content":"I'll help you with that.","tool_uses":[{"toolName":"bash","toolInput":{"command":"ls"},"toolOutput":"file1.txt\nfile2.txt"}],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1,"service_tier":"standard"}},"uuid":"test-uuid","timestamp":"2025-01-01T00:00:00Z","cwd":"/test","sessionId":"test-session","version":"1.0.0","userType":"external","isSidechain":false,"parentUuid":"parent-123","requestId":"req-123"}"#;
 
     let entry = parse_transcript_line(tool_use_json).expect("Should parse tool use");
 
     match entry {
-        TranscriptEntry::Assistant(assistant) => {
-            assert!(assistant.message.tool_uses.is_some());
-            let tool_uses = assistant.message.tool_uses.unwrap();
-            assert_eq!(tool_uses.len(), 1);
-            assert_eq!(tool_uses[0].tool_name, "bash");
-        }
+        TranscriptEntry::Assistant(assistant) => match &assistant.message {
+            TranscriptMessage::Assistant { tool_uses, .. } => {
+                assert!(tool_uses.is_some());
+                let tool_uses = tool_uses.as_ref().unwrap();
+                assert_eq!(tool_uses.len(), 1);
+                assert_eq!(tool_uses[0].tool_name, "bash");
+            }
+            _ => panic!("Expected assistant message type"),
+        },
         _ => panic!("Expected assistant entry"),
     }
 }
