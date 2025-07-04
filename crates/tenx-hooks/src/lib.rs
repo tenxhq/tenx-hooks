@@ -35,13 +35,15 @@ mod notification;
 mod posttool;
 mod pretool;
 mod response;
+mod stop;
 
 pub mod exit;
 pub mod output;
 
 pub use error::{Error, Result};
-pub use input::{Input, Stop};
+pub use input::Input;
 pub use notification::{Notification, NotificationOutput};
 pub use posttool::{PostToolUse, PostToolUseOutput};
 pub use pretool::{PreToolUse, PreToolUseOutput};
 pub use response::HookResponse;
+pub use stop::{Stop, StopOutput};

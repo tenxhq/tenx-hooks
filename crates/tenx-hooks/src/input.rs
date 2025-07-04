@@ -2,22 +2,6 @@ use crate::error::Result;
 use serde::Deserialize;
 use std::io::{self, Read as IoRead};
 
-/// Input structure for Stop hooks.
-///
-/// Stop hooks run when Claude Code has finished responding. They can
-/// block Claude from stopping and request continuation.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct Stop {
-    /// Unique identifier for the current Claude Code session
-    pub session_id: String,
-    /// Path to the conversation transcript JSON file
-    pub transcript_path: String,
-    /// True when Claude Code is already continuing as a result of a stop hook.
-    /// Check this to prevent infinite loops.
-    pub stop_hook_active: bool,
-}
-
 /// Trait for hook input types that can be read from stdin.
 ///
 /// This trait provides a standard way to read hook inputs by:
@@ -42,5 +26,3 @@ pub trait Input: for<'de> Deserialize<'de> + Sized {
         Ok(parsed)
     }
 }
-
-impl Input for Stop {}
