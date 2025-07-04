@@ -1,28 +1,6 @@
 use crate::error::Result;
 use serde::Deserialize;
-use serde_json::Value;
-use std::collections::HashMap;
 use std::io::{self, Read as IoRead};
-
-/// Input structure for PostToolUse hooks.
-///
-/// PostToolUse hooks run immediately after a tool completes successfully.
-/// They can provide feedback to Claude but cannot prevent the tool from running
-/// (since it already ran).
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct PostToolUse {
-    /// Unique identifier for the current Claude Code session
-    pub session_id: String,
-    /// Path to the conversation transcript JSON file
-    pub transcript_path: String,
-    /// Name of the tool that was called
-    pub tool_name: String,
-    /// Tool-specific input parameters that were used
-    pub tool_input: HashMap<String, Value>,
-    /// Tool-specific response data. The exact schema depends on the tool.
-    pub tool_response: HashMap<String, Value>,
-}
 
 /// Input structure for Notification hooks.
 ///
@@ -83,6 +61,5 @@ pub trait Input: for<'de> Deserialize<'de> + Sized {
     }
 }
 
-impl Input for PostToolUse {}
 impl Input for Notification {}
 impl Input for Stop {}

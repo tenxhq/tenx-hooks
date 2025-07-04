@@ -17,73 +17,6 @@ pub enum Decision {
     Block,
 }
 
-/// Output structure for PostToolUse hooks.
-///
-/// Provides feedback to Claude after a tool has already executed.
-#[derive(Debug, Serialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct PostToolUseOutput {
-    /// Whether to provide feedback to Claude.
-    /// - `Block`: Automatically prompts Claude with reason
-    /// - `None`: No feedback provided
-    ///
-    /// Note: Cannot use `Approve` since the tool already ran
-    #[serde(skip_serializing_if = "is_none")]
-    pub decision: Option<Decision>,
-
-    /// Feedback message for Claude (used when decision is Block)
-    #[serde(skip_serializing_if = "is_none")]
-    pub reason: Option<String>,
-
-    /// Whether Claude should continue after hook execution (default: true)
-    #[serde(rename = "continue", skip_serializing_if = "is_none")]
-    pub continue_: Option<bool>,
-
-    /// Message shown to user when continue is false
-    #[serde(skip_serializing_if = "is_none")]
-    pub stop_reason: Option<String>,
-
-    /// Hide output from transcript mode (default: false)
-    #[serde(skip_serializing_if = "is_none")]
-    pub suppress_output: Option<bool>,
-}
-
-impl PostToolUseOutput {
-    /// Create a block response (PostToolUse can only block, not approve)
-    pub fn block(reason: &str) -> Self {
-        Self {
-            decision: Some(Decision::Block),
-            reason: Some(reason.to_string()),
-            ..Default::default()
-        }
-    }
-
-    /// Set the continue field to false and provide a stop reason
-    pub fn stop(mut self, reason: &str) -> Self {
-        self.continue_ = Some(false);
-        self.stop_reason = Some(reason.to_string());
-        self
-    }
-
-    /// Set whether to suppress output in transcript mode
-    pub fn suppress_output(mut self, suppress: bool) -> Self {
-        self.suppress_output = Some(suppress);
-        self
-    }
-
-    /// Set a custom reason (overwrites the one from block)
-    pub fn with_reason(mut self, reason: &str) -> Self {
-        self.reason = Some(reason.to_string());
-        self
-    }
-
-    /// Clear the reason
-    pub fn without_reason(mut self) -> Self {
-        self.reason = None;
-        self
-    }
-}
-
 /// Output structure for Notification hooks.
 ///
 /// Controls continuation and output visibility for notification handling.
@@ -177,13 +110,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_post_tool_use_output_block() {
-        let output = PostToolUseOutput::block("Test block");
-        assert!(matches!(output.decision, Some(Decision::Block)));
-        assert_eq!(output.reason, Some("Test block".to_string()));
-    }
-
-    #[test]
     fn test_stop_output_block() {
         let output = StopOutput::block("Must continue");
         assert!(matches!(output.decision, Some(Decision::Block)));
@@ -199,18 +125,6 @@ mod tests {
         assert_eq!(output.continue_, Some(false));
         assert_eq!(output.stop_reason, Some("error occurred".to_string()));
         assert_eq!(output.suppress_output, Some(true));
-    }
-
-    #[test]
-    fn test_post_tool_use_builder() {
-        let output = PostToolUseOutput::default()
-            .stop("tests failed")
-            .suppress_output(false);
-
-        assert_eq!(output.decision, None);
-        assert_eq!(output.continue_, Some(false));
-        assert_eq!(output.stop_reason, Some("tests failed".to_string()));
-        assert_eq!(output.suppress_output, Some(false));
     }
 
     #[test]

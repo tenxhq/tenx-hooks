@@ -1,5 +1,9 @@
 # Claude Code Hooks - Summary
 
+This document summarizes what I can understand about the Claude Code hooks from
+the docs, with some guesswork, sleuthing through Github issues, and testing to
+guide me. The documentation alone is quite ambiguous.
+
 ## Output Visibility: Normal vs Transcript Mode
 
 * **Normal mode (chat pane)**
@@ -72,7 +76,8 @@ Runs **after** a tool finishes successfully.
 
 ### JSON output (exit 0)
 
-Same keys as PreToolUse **except** `tool_input` rewrite is ignored.
+Same keys as PreToolUse, but decision cannot be approve, because the tool has
+already run.
 
 ---
 
