@@ -83,10 +83,6 @@ fn display_single_transcript(path: String, color_mode: ColorMode, strict: bool) 
             "\x1b[92mSuccessfully parsed {} entries\x1b[0m",
             parse_result.entries.len()
         );
-
-        for (idx, _entry) in parse_result.entries.iter().enumerate() {
-            println!("\x1b[94m[{}]\x1b[0m Entry #{}", idx + 1, idx + 1);
-        }
     } else {
         // Non-strict mode: parse and display what we can
         let parse_result = parse_transcript_with_context(&content);

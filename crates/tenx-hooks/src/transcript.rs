@@ -70,7 +70,8 @@ pub struct SystemEntry {
     pub is_sidechain: bool,
     pub parent_uuid: String,
     pub is_meta: bool,
-    pub level: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<String>,
     #[serde(rename = "toolUseID", skip_serializing_if = "Option::is_none")]
     pub tool_use_id: Option<String>,
 }
@@ -111,14 +112,6 @@ impl TranscriptMessage {
             TranscriptMessage::Assistant { content, .. } => content.as_ref(),
         }
     }
-
-    /// Get the role as a string
-    pub fn role(&self) -> &str {
-        match self {
-            TranscriptMessage::User { .. } => "user",
-            TranscriptMessage::Assistant { .. } => "assistant",
-        }
-    }
 }
 
 /// Content can be either a simple string or an array of content blocks
@@ -130,30 +123,6 @@ pub enum MessageContent {
 }
 
 impl MessageContent {
-    /// Get the text content as a single string
-    pub fn as_text(&self) -> String {
-        match self {
-            MessageContent::Text(text) => text.clone(),
-            MessageContent::Blocks(blocks) => blocks
-                .iter()
-                .map(|b| match b {
-                    ContentBlock::Text { text, .. } => text.clone(),
-                    ContentBlock::ToolUse { name, .. } => name.clone(),
-                    ContentBlock::ToolResult { content, .. } => match content {
-                        ToolResultContent::Text(text) => text.clone(),
-                        ToolResultContent::Array(items) => items
-                            .iter()
-                            .map(|item| item.text.as_str())
-                            .collect::<Vec<_>>()
-                            .join(" "),
-                    },
-                    ContentBlock::Thinking { thinking, .. } => thinking.clone(),
-                })
-                .collect::<Vec<_>>()
-                .join(" "),
-        }
-    }
-
     /// Check if content contains tool uses
     pub fn has_tool_uses(&self) -> bool {
         match self {
@@ -257,28 +226,6 @@ pub struct UsageInfo {
     pub output_tokens: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub service_tier: Option<String>,
-}
-
-impl TranscriptEntry {
-    /// Get the UUID if available
-    pub fn uuid(&self) -> Option<&str> {
-        match self {
-            TranscriptEntry::User(entry) => Some(&entry.uuid),
-            TranscriptEntry::Assistant(entry) => Some(&entry.uuid),
-            TranscriptEntry::System(entry) => Some(&entry.uuid),
-            TranscriptEntry::Summary(_) => None,
-        }
-    }
-
-    /// Get the timestamp if available
-    pub fn timestamp(&self) -> Option<&str> {
-        match self {
-            TranscriptEntry::User(entry) => Some(&entry.timestamp),
-            TranscriptEntry::Assistant(entry) => Some(&entry.timestamp),
-            TranscriptEntry::System(entry) => Some(&entry.timestamp),
-            TranscriptEntry::Summary(_) => None,
-        }
-    }
 }
 
 /// Error type for transcript parsing with detailed context

@@ -1,5 +1,6 @@
 use tenx_hooks::transcript::{
-    TranscriptEntry, TranscriptMessage, parse_transcript_line, parse_transcript_with_context,
+    ContentBlock, MessageContent, TranscriptEntry, TranscriptMessage, parse_transcript_line,
+    parse_transcript_with_context,
 };
 
 #[test]
@@ -141,7 +142,7 @@ fn test_system_entry_without_tool_use_id() {
                 system.content,
                 "Claude Opus 4 limit reached, now using Sonnet 4"
             );
-            assert_eq!(system.level, "warning");
+            assert_eq!(system.level, Some("warning".to_string()));
             assert!(system.tool_use_id.is_none());
         }
         _ => panic!("Expected system entry"),
@@ -164,8 +165,18 @@ fn test_assistant_api_error_without_request_id() {
             match &assistant.message {
                 TranscriptMessage::Assistant { content, .. } => {
                     assert!(content.is_some());
-                    let text = content.as_ref().unwrap().as_text();
-                    assert!(text.contains("API Error"));
+                    match content.as_ref().unwrap() {
+                        MessageContent::Blocks(blocks) => {
+                            assert_eq!(blocks.len(), 1);
+                            match &blocks[0] {
+                                ContentBlock::Text { text } => {
+                                    assert!(text.contains("API Error"));
+                                }
+                                _ => panic!("Expected text block"),
+                            }
+                        }
+                        _ => panic!("Expected blocks content"),
+                    }
                 }
                 _ => panic!("Expected assistant message type"),
             }
@@ -189,12 +200,42 @@ fn test_assistant_thinking_content() {
             match &assistant.message {
                 TranscriptMessage::Assistant { content, .. } => {
                     assert!(content.is_some());
-                    let text = content.as_ref().unwrap().as_text();
-                    assert!(text.contains("Clean up the indenting"));
+                    match content.as_ref().unwrap() {
+                        MessageContent::Blocks(blocks) => {
+                            assert_eq!(blocks.len(), 1);
+                            match &blocks[0] {
+                                ContentBlock::Thinking { thinking, .. } => {
+                                    assert!(thinking.contains("Clean up the indenting"));
+                                }
+                                _ => panic!("Expected thinking block"),
+                            }
+                        }
+                        _ => panic!("Expected blocks content"),
+                    }
                 }
                 _ => panic!("Expected assistant message type"),
             }
         }
         _ => panic!("Expected assistant entry"),
+    }
+}
+
+#[test]
+fn test_system_entry_without_level() {
+    // Test the specific system entry without level field
+    let json_line = r#"{"parentUuid":"1f67ebc1-6080-4436-a4d1-fad302b74613","isSidechain":false,"userType":"external","cwd":"/Users/cortesi/git/public/tenx","sessionId":"cc2f4c22-5bac-4cf2-8136-a694786acbb6","version":"1.0.16","type":"system","content":"Claude Opus 4 limit reached, now using Sonnet 4","isMeta":false,"timestamp":"2025-06-06T03:42:49.574Z","uuid":"200b8f7f-327c-421b-839a-3045a77166c1"}"#;
+
+    let entry = parse_transcript_line(json_line).expect("Should parse system entry without level");
+
+    match entry {
+        TranscriptEntry::System(system) => {
+            assert_eq!(
+                system.content,
+                "Claude Opus 4 limit reached, now using Sonnet 4"
+            );
+            assert!(system.level.is_none());
+            assert!(system.tool_use_id.is_none());
+        }
+        _ => panic!("Expected system entry"),
     }
 }
