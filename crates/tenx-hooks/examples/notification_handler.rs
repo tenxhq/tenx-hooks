@@ -6,7 +6,7 @@ fn main() -> Result<()> {
 
     // Log notification info to stderr (visible in hooktest output)
     eprintln!("Notification received!");
-    eprintln!("Title: {}", notification.title);
+    eprintln!("Hook event name: {}", notification.hook_event_name);
     eprintln!("Message: {}", notification.message);
     eprintln!("Session ID: {}", notification.session_id);
 

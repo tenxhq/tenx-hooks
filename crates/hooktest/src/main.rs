@@ -4,6 +4,7 @@ mod output;
 mod posttool;
 mod pretool;
 mod stop;
+mod subagent_stop;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -113,6 +114,25 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         hook_args: Vec<String>,
     },
+    /// Test a SubagentStop hook
+    #[command(name = "subagentstop")]
+    SubagentStop {
+        /// Session ID for the hook
+        #[arg(long)]
+        sessionid: String,
+
+        /// Transcript path for the hook
+        #[arg(long, default_value = "/tmp/transcript.json")]
+        transcript: String,
+
+        /// Whether stop hook is already active (to prevent loops)
+        #[arg(long, default_value = "false")]
+        active: bool,
+
+        /// Hook command and arguments (everything after --)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        hook_args: Vec<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -149,5 +169,11 @@ fn main() -> Result<()> {
             active,
             hook_args,
         } => stop::run_stop_hook(sessionid, transcript, active, hook_args),
+        Commands::SubagentStop {
+            sessionid,
+            transcript,
+            active,
+            hook_args,
+        } => subagent_stop::run_subagent_stop_hook(sessionid, transcript, active, hook_args),
     }
 }

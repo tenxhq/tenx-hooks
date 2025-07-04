@@ -1,23 +1,21 @@
 use crate::execute::execute_hook;
 use crate::output::Output;
 use anyhow::Result;
-use tenx_hooks::Notification;
+use tenx_hooks::SubagentStop;
 
-pub fn run_notification_hook(
+pub fn run_subagent_stop_hook(
     session_id: String,
     transcript_path: String,
-    message: String,
-    title: String,
+    stop_hook_active: bool,
     hook_args: Vec<String>,
 ) -> Result<()> {
     let mut out = Output::new();
 
-    // Create the hook input using the Notification struct
-    let hook_input = Notification {
+    // Create the hook input using the SubagentStop struct
+    let hook_input = SubagentStop {
         session_id,
         transcript_path,
-        message,
-        hook_event_name: title,
+        stop_hook_active,
     };
 
     // Serialize to JSON
@@ -32,15 +30,33 @@ pub fn run_notification_hook(
     )? {
         out.h1("What Claude/User Would See")?;
 
-        // Check continue field
+        // Parse decision field
+        if let Some(decision) = hook_output.get("decision").and_then(|d| d.as_str()) {
+            match decision {
+                "block" => {
+                    out.write("Decision: ")?;
+                    out.error("BLOCK")?;
+                    out.newline()?;
+
+                    if let Some(reason) = hook_output.get("reason").and_then(|r| r.as_str()) {
+                        out.label("Subagent continues with", reason)?;
+                    }
+                }
+                _ => {
+                    out.label("Decision", &format!("Unknown ({decision})"))?;
+                }
+            }
+        } else {
+            out.dimmed("Decision: NONE (Subagent stops normally)")?;
+        }
+
         if hook_output.get("continue").and_then(|c| c.as_bool()) == Some(false) {
-            out.error("Claude would STOP processing")?;
+            out.newline()?;
+            out.error("Subagent would STOP processing")?;
             out.newline()?;
             if let Some(reason) = hook_output.get("stopReason").and_then(|r| r.as_str()) {
                 out.label("Stop reason shown to user", reason)?;
             }
-        } else {
-            out.dimmed("Claude continues normally")?;
         }
 
         if hook_output.get("suppressOutput").and_then(|s| s.as_bool()) == Some(true) {
