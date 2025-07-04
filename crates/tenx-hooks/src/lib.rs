@@ -30,7 +30,6 @@
 //! ```
 
 mod error;
-mod hook;
 mod input;
 mod pretool;
 mod response;
@@ -39,7 +38,6 @@ pub mod exit;
 pub mod output;
 
 pub use error::{Error, Result};
-pub use hook::Hook;
 pub use input::{Input, Notification, PostToolUse, Stop};
 pub use pretool::{PreToolUse, PreToolUseOutput};
 pub use response::HookResponse;
