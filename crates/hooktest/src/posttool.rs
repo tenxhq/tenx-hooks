@@ -1,8 +1,9 @@
 use crate::output::Output;
 use anyhow::Result;
-use serde_json::json;
+use std::collections::HashMap;
 use std::io::Write;
 use std::process::{Command, Stdio};
+use tenx_hooks::PostToolUse;
 
 pub fn run_posttooluse_hook(
     session_id: String,
@@ -14,18 +15,19 @@ pub fn run_posttooluse_hook(
 ) -> Result<()> {
     let mut out = Output::new();
 
-    // Parse the tool input and response JSON
-    let tool_input: serde_json::Value = serde_json::from_str(&tool_input_str)?;
-    let tool_response: serde_json::Value = serde_json::from_str(&tool_response_str)?;
+    // Parse the tool input and response JSON into HashMaps
+    let tool_input: HashMap<String, serde_json::Value> = serde_json::from_str(&tool_input_str)?;
+    let tool_response: HashMap<String, serde_json::Value> =
+        serde_json::from_str(&tool_response_str)?;
 
-    // Create the hook input JSON
-    let hook_input = json!({
-        "session_id": session_id,
-        "transcript_path": transcript_path,
-        "tool_name": tool_name,
-        "tool_input": tool_input,
-        "tool_response": tool_response
-    });
+    // Create the hook input using the PostToolUse struct
+    let hook_input = PostToolUse {
+        session_id,
+        transcript_path,
+        tool_name,
+        tool_input,
+        tool_response,
+    };
 
     // Serialize to JSON
     let input_json = serde_json::to_string(&hook_input)?;
@@ -47,7 +49,7 @@ pub fn run_posttooluse_hook(
     )?;
 
     out.h1("Input JSON")?;
-    out.json(&hook_input)?;
+    out.json(&serde_json::to_value(&hook_input)?)?;
 
     out.h1("Execution")?;
 

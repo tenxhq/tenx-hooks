@@ -11,7 +11,7 @@ use crate::response::HookResponse;
 /// PostToolUse hooks run immediately after a tool completes successfully.
 /// They can provide feedback to Claude but cannot prevent the tool from running
 /// (since it already ran).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct PostToolUse {
     /// Unique identifier for the current Claude Code session

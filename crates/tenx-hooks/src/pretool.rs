@@ -10,7 +10,7 @@ use crate::response::HookResponse;
 ///
 /// PreToolUse hooks run after Claude creates tool parameters but before
 /// processing the tool call. They can approve or block the operation.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct PreToolUse {
     /// Unique identifier for the current Claude Code session

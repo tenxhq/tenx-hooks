@@ -9,7 +9,7 @@ use crate::response::HookResponse;
 /// Notification hooks run when Claude Code sends notifications, allowing
 /// you to customize how you receive alerts (e.g., when Claude needs input
 /// or permission to run something).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Notification {
     /// Unique identifier for the current Claude Code session

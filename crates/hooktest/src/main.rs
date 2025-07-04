@@ -1,3 +1,4 @@
+mod notification;
 mod output;
 mod posttool;
 mod pretool;
@@ -68,6 +69,29 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         hook_args: Vec<String>,
     },
+    /// Test a Notification hook
+    #[command(name = "notification")]
+    Notification {
+        /// Session ID for the hook
+        #[arg(long)]
+        sessionid: String,
+
+        /// Transcript path for the hook
+        #[arg(long, default_value = "/tmp/transcript.json")]
+        transcript: String,
+
+        /// Notification message
+        #[arg(long, default_value = "Claude needs permission to run a command")]
+        message: String,
+
+        /// Notification title
+        #[arg(long, default_value = "Claude Code")]
+        title: String,
+
+        /// Hook command and arguments (everything after --)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        hook_args: Vec<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -91,5 +115,12 @@ fn main() -> Result<()> {
         } => {
             posttool::run_posttooluse_hook(sessionid, transcript, tool, input, response, hook_args)
         }
+        Commands::Notification {
+            sessionid,
+            transcript,
+            message,
+            title,
+            hook_args,
+        } => notification::run_notification_hook(sessionid, transcript, message, title, hook_args),
     }
 }
