@@ -8,7 +8,7 @@ fn test_tool_result_with_array_content() {
 
     match parse_transcript_line(json_line) {
         Ok(entry) => {
-            println!("Successfully parsed: {}", entry.description());
+            println!("Successfully parsed user entry");
             // Verify it's a user entry
             match entry {
                 TranscriptEntry::User(_) => {

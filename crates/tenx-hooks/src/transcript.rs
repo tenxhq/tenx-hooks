@@ -251,67 +251,6 @@ pub struct UsageInfo {
 }
 
 impl TranscriptEntry {
-    /// Get a brief description of the entry for logging
-    pub fn description(&self) -> String {
-        match self {
-            TranscriptEntry::System(entry) => {
-                format!("System[{}]", entry.level)
-            }
-            TranscriptEntry::User(entry) => {
-                let preview = entry
-                    .message
-                    .content()
-                    .map(|c| {
-                        let text = c.as_text();
-                        let truncated = text.chars().take(50).collect::<String>();
-                        if text.len() > 50 {
-                            format!("{truncated}...")
-                        } else {
-                            truncated
-                        }
-                    })
-                    .unwrap_or_else(|| "No content".to_string());
-                format!("User: {preview}")
-            }
-            TranscriptEntry::Assistant(entry) => {
-                match &entry.message {
-                    TranscriptMessage::Assistant {
-                        thinking,
-                        tool_uses,
-                        code_outputs,
-                        content,
-                        ..
-                    } => {
-                        let has_thinking = thinking.is_some();
-
-                        // Count tool uses from both tool_uses field and content
-                        let tool_uses_count = tool_uses.as_ref().map(|t| t.len()).unwrap_or(0);
-                        let content_tool_count =
-                            content.as_ref().map(|c| c.count_tool_uses()).unwrap_or(0);
-                        let total_tool_count = tool_uses_count + content_tool_count;
-                        let code_count = code_outputs.as_ref().map(|c| c.len()).unwrap_or(0);
-
-                        let mut parts = vec!["Assistant".to_string()];
-                        if has_thinking {
-                            parts.push("with thinking".to_string());
-                        }
-                        if total_tool_count > 0 {
-                            parts.push(format!("{total_tool_count} tool uses"));
-                        }
-                        if code_count > 0 {
-                            parts.push(format!("{code_count} code outputs"));
-                        }
-                        parts.join(": ")
-                    }
-                    _ => "Assistant: unexpected message type".to_string(),
-                }
-            }
-            TranscriptEntry::Summary(entry) => {
-                format!("Summary: {}", &entry.summary)
-            }
-        }
-    }
-
     /// Get the UUID if available
     pub fn uuid(&self) -> Option<&str> {
         match self {

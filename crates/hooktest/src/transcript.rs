@@ -48,8 +48,8 @@ pub fn display_transcript(path: String, color_mode: ColorMode, strict: bool) -> 
             parse_result.entries.len()
         );
 
-        for (idx, entry) in parse_result.entries.iter().enumerate() {
-            println!("\x1b[94m[{}]\x1b[0m {}", idx + 1, entry.description());
+        for (idx, _entry) in parse_result.entries.iter().enumerate() {
+            println!("\x1b[94m[{}]\x1b[0m Entry #{}", idx + 1, idx + 1);
         }
     } else {
         // Non-strict mode: parse and display what we can
@@ -73,9 +73,15 @@ pub fn display_transcript(path: String, color_mode: ColorMode, strict: bool) -> 
                     // Add line number
                     println!("\x1b[2m# Line {}\x1b[0m", line_idx + 1);
 
-                    // If we can parse it as a transcript entry, show its description
+                    // If we can parse it as a transcript entry, show entry type
                     if let Ok(entry) = serde_json::from_value::<TranscriptEntry>(value.clone()) {
-                        println!("\x1b[94m{}\x1b[0m", entry.description());
+                        let entry_type = match entry {
+                            TranscriptEntry::System(_) => "System entry",
+                            TranscriptEntry::User(_) => "User entry",
+                            TranscriptEntry::Assistant(_) => "Assistant entry",
+                            TranscriptEntry::Summary(_) => "Summary entry",
+                        };
+                        println!("\x1b[94m{entry_type}\x1b[0m");
                     }
 
                     // Pretty-print the JSON
