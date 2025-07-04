@@ -163,6 +163,10 @@ enum Commands {
     Transcript {
         /// Path to the transcript JSONL file
         path: String,
+
+        /// Enable strict validation to check for missing fields
+        #[arg(long)]
+        strict: bool,
     },
 }
 
@@ -218,6 +222,8 @@ fn main() -> Result<()> {
             filepath,
             transcript,
         } => log::run_log_hook(event, filepath, transcript, color_mode),
-        Commands::Transcript { path } => transcript::display_transcript(path, color_mode),
+        Commands::Transcript { path, strict } => {
+            transcript::display_transcript(path, color_mode, strict)
+        }
     }
 }

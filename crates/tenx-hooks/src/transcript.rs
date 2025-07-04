@@ -215,6 +215,24 @@ pub struct TranscriptParseResult {
     pub errors: Vec<TranscriptParseError>,
 }
 
+/// A transcript entry with its raw JSON representation
+#[derive(Debug)]
+pub struct TranscriptEntryWithRaw {
+    /// The parsed entry
+    pub entry: TranscriptEntry,
+    /// The raw JSON string from the file
+    pub raw: String,
+}
+
+/// Result of parsing a transcript with raw JSON preserved
+#[derive(Debug)]
+pub struct TranscriptParseResultWithRaw {
+    /// Successfully parsed entries with raw JSON
+    pub entries: Vec<TranscriptEntryWithRaw>,
+    /// Errors encountered during parsing (if any)
+    pub errors: Vec<TranscriptParseError>,
+}
+
 impl TranscriptEntry {
     /// Format the entry as pretty-printed JSON for debugging
     pub fn to_debug_json(&self) -> Result<String, serde_json::Error> {
@@ -341,4 +359,94 @@ pub fn format_json_line_for_debug(line: &str) -> String {
         // If it's not valid JSON, return as-is
         line.to_string()
     }
+}
+
+/// Parse a transcript with raw JSON preserved for validation
+pub fn parse_transcript_with_raw(content: &str) -> TranscriptParseResultWithRaw {
+    let mut entries = Vec::new();
+    let mut errors = Vec::new();
+
+    for (line_idx, line) in content.lines().enumerate() {
+        if line.is_empty() {
+            continue;
+        }
+
+        match parse_transcript_line(line) {
+            Ok(entry) => {
+                entries.push(TranscriptEntryWithRaw {
+                    entry,
+                    raw: line.to_string(),
+                });
+            }
+            Err(json_error) => {
+                errors.push(TranscriptParseError {
+                    line_number: line_idx + 1,
+                    line_content: line.to_string(),
+                    json_error,
+                });
+            }
+        }
+    }
+
+    TranscriptParseResultWithRaw { entries, errors }
+}
+
+/// Compare two JSON values recursively to find fields that exist in `raw` but not in `parsed`
+pub fn find_missing_fields(raw: &Value, parsed: &Value, path: Vec<String>) -> Vec<String> {
+    let mut missing_fields = Vec::new();
+
+    match (raw, parsed) {
+        (Value::Object(raw_map), Value::Object(parsed_map)) => {
+            // Check each field in raw
+            for (key, raw_value) in raw_map {
+                let mut new_path = path.clone();
+                new_path.push(key.clone());
+
+                if let Some(parsed_value) = parsed_map.get(key) {
+                    // Field exists in both, recurse
+                    missing_fields.extend(find_missing_fields(raw_value, parsed_value, new_path));
+                } else {
+                    // Field exists in raw but not in parsed
+                    let field_path = if new_path.is_empty() {
+                        key.clone()
+                    } else {
+                        new_path.join(".")
+                    };
+                    missing_fields.push(field_path);
+                }
+            }
+        }
+        (Value::Array(raw_arr), Value::Array(parsed_arr)) => {
+            // For arrays, check each element
+            for (i, (raw_elem, parsed_elem)) in raw_arr.iter().zip(parsed_arr.iter()).enumerate() {
+                let mut new_path = path.clone();
+                new_path.push(format!("[{i}]"));
+                missing_fields.extend(find_missing_fields(raw_elem, parsed_elem, new_path));
+            }
+        }
+        _ => {
+            // For other types, no fields to compare
+        }
+    }
+
+    missing_fields
+}
+
+/// Validate that a TranscriptEntry faithfully represents all fields from the raw JSON
+pub fn validate_transcript_entry(
+    entry: &TranscriptEntryWithRaw,
+) -> Result<Vec<String>, serde_json::Error> {
+    // Parse the raw JSON
+    let raw_value: Value = serde_json::from_str(&entry.raw)?;
+
+    // Serialize the entry back to JSON string
+    let entry_json = serde_json::to_string(&entry.entry)?;
+
+    // Parse the serialized entry to Value
+    let parsed_value: Value = serde_json::from_str(&entry_json)?;
+
+    // Find missing fields
+    let missing_fields = find_missing_fields(&raw_value, &parsed_value, Vec::new());
+
+    Ok(missing_fields)
 }
