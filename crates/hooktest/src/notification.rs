@@ -2,7 +2,7 @@ use crate::color::ColorMode;
 use crate::execute::execute_hook;
 use crate::output::Output;
 use anyhow::Result;
-use tenx_hooks::Notification;
+use code_hooks::Notification;
 
 pub fn run_notification_hook(
     session_id: String,

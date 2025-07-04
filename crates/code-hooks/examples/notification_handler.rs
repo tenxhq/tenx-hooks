@@ -1,4 +1,4 @@
-use tenx_hooks::{HookResponse, Input, Notification, Result};
+use code_hooks::{HookResponse, Input, Notification, Result};
 
 fn main() -> Result<()> {
     // Read the hook input from stdin

@@ -2,8 +2,8 @@ use crate::color::ColorMode;
 use crate::execute::execute_hook;
 use crate::output::Output;
 use anyhow::Result;
+use code_hooks::PostToolUse;
 use std::collections::HashMap;
-use tenx_hooks::PostToolUse;
 
 pub fn run_posttooluse_hook(
     session_id: String,

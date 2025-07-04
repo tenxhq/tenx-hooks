@@ -1,4 +1,4 @@
-use tenx_hooks::{HookResponse, Input, PreToolUse, Result};
+use code_hooks::{HookResponse, Input, PreToolUse, Result};
 
 fn main() -> Result<()> {
     let input = PreToolUse::read()?;

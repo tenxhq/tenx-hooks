@@ -1,11 +1,11 @@
-# tenx-hooks
+# code-hooks
 
 A Rust library for building hooks for [Claude Code](https://claude.ai/code),
 Anthropic's official CLI for Claude.
 
 ## Overview
 
-`tenx-hooks` provides a type-safe way to write hooks that extend Claude Code's
+`code-hooks` provides a type-safe way to write hooks that extend Claude Code's
 functionality. Hooks are shell commands that execute at various points in
 Claude Code's lifecycle, enabling you to automate formatting, enforce policies,
 customize notifications, and more.
@@ -24,7 +24,7 @@ customize notifications, and more.
 ## Example
 
 ```rust
-use tenx_hooks::{HookResponse, Input, PreToolUse, Result};
+use code_hooks::{HookResponse, Input, PreToolUse, Result};
 
 fn main() -> Result<()> {
     let input = PreToolUse::read()?;

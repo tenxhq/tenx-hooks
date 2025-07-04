@@ -1,4 +1,4 @@
-use tenx_hooks::{HookResponse, Input, PreToolUse, PreToolUseOutput, Result};
+use code_hooks::{HookResponse, Input, PreToolUse, PreToolUseOutput, Result};
 
 fn main() -> Result<()> {
     // Read PreToolUse input from stdin

@@ -1,8 +1,8 @@
 use crate::color::{ColorMode, JsonHighlighter};
 use anyhow::Result;
+use code_hooks::parse::parse_transcript_with_context;
+use code_hooks::transcript::TranscriptEntry;
 use std::fs;
-use tenx_hooks::parse::parse_transcript_with_context;
-use tenx_hooks::transcript::TranscriptEntry;
 
 pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, strict: bool) -> Result<()> {
     if paths.is_empty() {

@@ -6,13 +6,13 @@
 //! to choose to run them.
 //!
 //! This library implements the JSON-based hook protocol used by Claude Code only, avoiding the
-//! less well-defined error code protocol. This means tenx-hooks tools always exit with status code
+//! less well-defined error code protocol. This means code-hooks tools always exit with status code
 //! 0, and return well-formed JSON responses.
 //!
 //! # Example
 //!
 //! ```rust,no_run
-//! use tenx_hooks::{HookResponse, Input, PreToolUse, PreToolUseOutput, Result};
+//! use code_hooks::{HookResponse, Input, PreToolUse, PreToolUseOutput, Result};
 //!
 //! fn main() -> Result<()> {
 //!     let input = PreToolUse::read()?;

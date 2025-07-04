@@ -2,7 +2,7 @@ use crate::color::ColorMode;
 use crate::execute::execute_hook;
 use crate::output::Output;
 use anyhow::Result;
-use tenx_hooks::SubagentStop;
+use code_hooks::SubagentStop;
 
 pub fn run_subagent_stop_hook(
     session_id: String,

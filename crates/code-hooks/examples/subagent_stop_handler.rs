@@ -1,4 +1,4 @@
-use tenx_hooks::{HookResponse, Input, Result, SubagentStop};
+use code_hooks::{HookResponse, Input, Result, SubagentStop};
 
 fn main() -> Result<()> {
     // Read the hook input from stdin
