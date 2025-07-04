@@ -10,7 +10,7 @@ echo ""
 
 # Test with a safe command
 ./target/debug/hooktest \
-    pretooluse \
+    pretool \
     --sessionid safe-test-$(date +%s) \
     --tool Bash \
     --input '{"command": "ls -la"}' \
@@ -25,7 +25,7 @@ echo ""
 
 # Test with a dangerous command
 ./target/debug/hooktest \
-    pretooluse \
+    pretool \
     --sessionid danger-test-$(date +%s) \
     --tool Bash \
     --input '{"command": "rm -rf /"}' \
