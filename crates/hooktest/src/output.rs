@@ -1,15 +1,23 @@
+use crate::color::{ColorMode, JsonHighlighter};
 use anyhow::Result;
 use std::io::Write;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 pub struct Output {
     stdout: StandardStream,
+    json_highlighter: JsonHighlighter,
 }
 
 impl Output {
-    pub fn new() -> Self {
+    pub fn new(color_mode: ColorMode) -> Self {
+        let color_choice = if color_mode.should_colorize() {
+            ColorChoice::Always
+        } else {
+            ColorChoice::Never
+        };
         Self {
-            stdout: StandardStream::stdout(ColorChoice::Always),
+            stdout: StandardStream::stdout(color_choice),
+            json_highlighter: JsonHighlighter::new(color_mode),
         }
     }
 
@@ -69,12 +77,10 @@ impl Output {
         self.color(text, Color::Red, true)
     }
 
-    /// Print JSON in magenta
+    /// Print JSON with syntax highlighting
     pub fn json(&mut self, json: &serde_json::Value) -> Result<()> {
-        self.stdout
-            .set_color(ColorSpec::new().set_fg(Some(Color::Magenta)))?;
-        writeln!(self.stdout, "{}", serde_json::to_string_pretty(json)?)?;
-        self.stdout.reset()?;
+        let json_str = serde_json::to_string_pretty(json)?;
+        self.json_highlighter.print_json(&json_str)?;
         Ok(())
     }
 

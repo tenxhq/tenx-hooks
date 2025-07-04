@@ -43,13 +43,88 @@ pub enum TranscriptEntryType {
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
+    pub content: Option<MessageContent>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_uses: Option<Vec<ToolUse>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_outputs: Option<Vec<CodeOutput>>,
+}
+
+/// Content can be either a simple string or an array of content blocks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MessageContent {
+    Text(String),
+    Blocks(Vec<ContentBlock>),
+}
+
+impl MessageContent {
+    /// Get the text content as a single string
+    pub fn as_text(&self) -> String {
+        match self {
+            MessageContent::Text(text) => text.clone(),
+            MessageContent::Blocks(blocks) => blocks
+                .iter()
+                .filter_map(|b| match b {
+                    ContentBlock::Text { text, .. } => Some(text.as_str()),
+                    ContentBlock::ToolUse { name, .. } => Some(name.as_str()),
+                    ContentBlock::ToolResult { content, .. } => Some(content.as_str()),
+                })
+                .collect::<Vec<_>>()
+                .join(" "),
+        }
+    }
+
+    /// Check if content contains tool uses
+    pub fn has_tool_uses(&self) -> bool {
+        match self {
+            MessageContent::Text(_) => false,
+            MessageContent::Blocks(blocks) => blocks
+                .iter()
+                .any(|b| matches!(b, ContentBlock::ToolUse { .. })),
+        }
+    }
+
+    /// Count tool uses in content
+    pub fn count_tool_uses(&self) -> usize {
+        match self {
+            MessageContent::Text(_) => 0,
+            MessageContent::Blocks(blocks) => blocks
+                .iter()
+                .filter(|b| matches!(b, ContentBlock::ToolUse { .. }))
+                .count(),
+        }
+    }
+
+    /// Count tool results in content
+    pub fn count_tool_results(&self) -> usize {
+        match self {
+            MessageContent::Text(_) => 0,
+            MessageContent::Blocks(blocks) => blocks
+                .iter()
+                .filter(|b| matches!(b, ContentBlock::ToolResult { .. }))
+                .count(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ContentBlock {
+    Text {
+        text: String,
+    },
+    ToolUse {
+        id: String,
+        name: String,
+        input: Value,
+    },
+    ToolResult {
+        tool_use_id: String,
+        content: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,8 +211,9 @@ impl TranscriptEntry {
                     .as_ref()
                     .and_then(|m| m.content.as_ref())
                     .map(|c| {
-                        let truncated = c.chars().take(50).collect::<String>();
-                        if c.len() > 50 {
+                        let text = c.as_text();
+                        let truncated = text.chars().take(50).collect::<String>();
+                        if text.len() > 50 {
                             format!("{truncated}...")
                         } else {
                             truncated
@@ -152,12 +228,24 @@ impl TranscriptEntry {
                     .as_ref()
                     .and_then(|m| m.thinking.as_ref())
                     .is_some();
-                let tool_count = self
+
+                // Count tool uses from both tool_uses field and content
+                let tool_uses_count = self
                     .message
                     .as_ref()
                     .and_then(|m| m.tool_uses.as_ref())
                     .map(|t| t.len())
                     .unwrap_or(0);
+
+                let content_tool_count = self
+                    .message
+                    .as_ref()
+                    .and_then(|m| m.content.as_ref())
+                    .map(|c| c.count_tool_uses())
+                    .unwrap_or(0);
+
+                let total_tool_count = tool_uses_count + content_tool_count;
+
                 let code_count = self
                     .message
                     .as_ref()
@@ -169,8 +257,8 @@ impl TranscriptEntry {
                 if has_thinking {
                     parts.push("with thinking".to_string());
                 }
-                if tool_count > 0 {
-                    parts.push(format!("{tool_count} tool uses"));
+                if total_tool_count > 0 {
+                    parts.push(format!("{total_tool_count} tool uses"));
                 }
                 if code_count > 0 {
                     parts.push(format!("{code_count} code outputs"));

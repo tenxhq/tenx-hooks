@@ -1,3 +1,4 @@
+use crate::color::ColorMode;
 use anyhow::{Result, bail};
 use serde::Serialize;
 use std::fs::OpenOptions;
@@ -19,6 +20,7 @@ pub fn run_log_hook(
     event: String,
     filepath: String,
     transcript_path: Option<String>,
+    _color_mode: ColorMode,
 ) -> Result<()> {
     // Parse the input based on event type and handle it
     match event.as_str() {

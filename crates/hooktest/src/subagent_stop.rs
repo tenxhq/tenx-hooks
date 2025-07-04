@@ -1,3 +1,4 @@
+use crate::color::ColorMode;
 use crate::execute::execute_hook;
 use crate::output::Output;
 use anyhow::Result;
@@ -8,8 +9,9 @@ pub fn run_subagent_stop_hook(
     transcript_path: String,
     stop_hook_active: bool,
     hook_args: Vec<String>,
+    color_mode: ColorMode,
 ) -> Result<()> {
-    let mut out = Output::new();
+    let mut out = Output::new(color_mode);
 
     // Create the hook input using the SubagentStop struct
     let hook_input = SubagentStop {

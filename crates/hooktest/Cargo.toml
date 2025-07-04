@@ -15,3 +15,5 @@ serde_json = "1"
 anyhow = "1"
 tenx-hooks = { path = "../tenx-hooks" }
 termcolor = "1"
+syntect = "5"
+atty = "0.2"

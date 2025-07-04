@@ -1,3 +1,4 @@
+mod color;
 mod execute;
 mod log;
 mod notification;
@@ -10,6 +11,7 @@ mod transcript;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use color::ColorMode;
 
 #[derive(Parser)]
 #[command(
@@ -18,6 +20,14 @@ use clap::{Parser, Subcommand};
     version
 )]
 struct Cli {
+    /// Enable colored output
+    #[arg(long, global = true, conflicts_with = "no_color")]
+    color: bool,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -158,6 +168,7 @@ enum Commands {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let color_mode = ColorMode::from_flags(cli.color, cli.no_color);
 
     match cli.command {
         Commands::PreTool {
@@ -166,7 +177,9 @@ fn main() -> Result<()> {
             tool,
             input,
             hook_args,
-        } => pretool::run_pretooluse_hook(sessionid, transcript, tool, input, hook_args),
+        } => {
+            pretool::run_pretooluse_hook(sessionid, transcript, tool, input, hook_args, color_mode)
+        }
         Commands::PostTool {
             sessionid,
             transcript,
@@ -174,33 +187,37 @@ fn main() -> Result<()> {
             input,
             response,
             hook_args,
-        } => {
-            posttool::run_posttooluse_hook(sessionid, transcript, tool, input, response, hook_args)
-        }
+        } => posttool::run_posttooluse_hook(
+            sessionid, transcript, tool, input, response, hook_args, color_mode,
+        ),
         Commands::Notification {
             sessionid,
             transcript,
             message,
             title,
             hook_args,
-        } => notification::run_notification_hook(sessionid, transcript, message, title, hook_args),
+        } => notification::run_notification_hook(
+            sessionid, transcript, message, title, hook_args, color_mode,
+        ),
         Commands::Stop {
             sessionid,
             transcript,
             active,
             hook_args,
-        } => stop::run_stop_hook(sessionid, transcript, active, hook_args),
+        } => stop::run_stop_hook(sessionid, transcript, active, hook_args, color_mode),
         Commands::SubagentStop {
             sessionid,
             transcript,
             active,
             hook_args,
-        } => subagent_stop::run_subagent_stop_hook(sessionid, transcript, active, hook_args),
+        } => subagent_stop::run_subagent_stop_hook(
+            sessionid, transcript, active, hook_args, color_mode,
+        ),
         Commands::Log {
             event,
             filepath,
             transcript,
-        } => log::run_log_hook(event, filepath, transcript),
-        Commands::Transcript { path } => transcript::display_transcript(path),
+        } => log::run_log_hook(event, filepath, transcript, color_mode),
+        Commands::Transcript { path } => transcript::display_transcript(path, color_mode),
     }
 }
