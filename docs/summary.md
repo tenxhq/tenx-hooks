@@ -51,12 +51,19 @@ Runs **before** a tool executes. Can approve, rewrite, or block the call.
 Supported keys:
 
 ```
-decision        "approve" | "block"   -- default "approve"
+decision        "approve" | "block"   -- omit for passthrough
 reason          string                -- user sees when approve, Claude when block
 continue        true | false          -- stop Claude entirely (default true)
 stopReason      string                -- visible when continue=false
 suppressOutput  true | false          -- hide raw JSON from transcript (default false)
 ```
+
+**Decision types:**
+- `"approve"`: Bypasses the permission system, tool executes immediately
+- `"block"`: Prevents tool execution, reason is passed to Claude as feedback
+- **Passthrough** (decision omitted/null): Defers to Claude's regular approval
+  flow - the agent may show an approval dialogue or proceed based on its
+  configuration
 
 ---
 
@@ -76,8 +83,18 @@ Runs **after** a tool finishes successfully.
 
 ### JSON output (exit 0)
 
-Same keys as PreToolUse, but decision cannot be approve, because the tool has
-already run.
+Same keys as PreToolUse, except `decision` semantics:
+
+**`decision` field:**
+- `"block"`: Suppresses normal tool_result message. Injects `reason` as error message to Claude.
+- Omitted/undefined: Normal tool_result passed to Claude. Any `reason` is discarded.
+- No `"approve"` option (tool already executed).
+
+**Key behaviors:**
+- `"block"` makes Claude see an error instead of the actual tool output
+- `continue: false` always overrides `decision` - halts session after tool
+  completes
+- Exit 0 required for JSON path; exit 2 similar to block but uses stderr
 
 ---
 
@@ -123,7 +140,19 @@ Runs after Claude thinks it is finished responding.
 
 ### JSON output (exit 0)
 
-Same keys as Notification.
+Supported keys:
+
+```
+decision        "block"               -- omit for passthrough
+reason          string                -- tells Claude how to proceed when blocked
+continue        true | false          -- stop Claude entirely (default true)
+stopReason      string                -- visible when continue=false
+suppressOutput  true | false          -- hide raw JSON from transcript (default false)
+```
+
+**Decision types for Stop:**
+- `"block"`: Prevents Claude from stopping, forces continuation with the provided reason
+- **Passthrough** (decision omitted/null): Allows Claude to stop normally
 
 An empty matcher in `settings.json` makes this hook fire once for *every*
 sub‑agent. Guard with a matcher or `stop_hook_active` to avoid loops. (new)

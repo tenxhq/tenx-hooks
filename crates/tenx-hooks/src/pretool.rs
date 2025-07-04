@@ -24,17 +24,23 @@ pub struct PreToolUse {
 }
 
 impl PreToolUse {
-    /// Create an approval response
+    /// Create an approval response that bypasses the permission system
+    ///
+    /// The tool executes immediately. The reason is shown to the user but not Claude.
     pub fn approve(&self, reason: &str) -> PreToolUseOutput {
         PreToolUseOutput::approve(reason)
     }
 
-    /// Create a block response
+    /// Create a block response that prevents tool execution
+    ///
+    /// The reason is passed to Claude as feedback.
     pub fn block(&self, reason: &str) -> PreToolUseOutput {
         PreToolUseOutput::block(reason)
     }
 
-    /// Create a passthrough response
+    /// Create a passthrough response that defers to Claude's regular approval flow
+    ///
+    /// The agent may show an approval dialogue or proceed based on its configuration.
     pub fn passthrough(&self) -> PreToolUseOutput {
         PreToolUseOutput::passthrough()
     }
@@ -78,7 +84,9 @@ pub struct PreToolUseOutput {
 }
 
 impl PreToolUseOutput {
-    /// Create an approval response
+    /// Create an approval response that bypasses the permission system
+    ///
+    /// The tool executes immediately. The reason is shown to the user but not Claude.
     pub fn approve(reason: &str) -> Self {
         Self {
             decision: Some(Decision::Approve),
@@ -87,7 +95,9 @@ impl PreToolUseOutput {
         }
     }
 
-    /// Create a block response
+    /// Create a block response that prevents tool execution
+    ///
+    /// The reason is passed to Claude as feedback.
     pub fn block(reason: &str) -> Self {
         Self {
             decision: Some(Decision::Block),
@@ -96,11 +106,10 @@ impl PreToolUseOutput {
         }
     }
 
-    /// Create a passthrough response
+    /// Create a passthrough response that defers to Claude's regular approval flow
     ///
-    /// This leaves both decision and reason as None, which allows the tool call
-    /// to proceed through Claude's normal approval process (user dialogue or
-    /// whatever permission system is configured).
+    /// This omits the decision field, allowing the agent to show an approval 
+    /// dialogue or proceed based on its configuration.
     pub fn passthrough() -> Self {
         Self::default()
     }
