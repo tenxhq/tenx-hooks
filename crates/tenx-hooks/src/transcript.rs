@@ -2,69 +2,74 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
 
+/// Main enum that represents different types of transcript entries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum TranscriptEntry {
+    User(UserEntry),
+    Assistant(AssistantEntry),
+    Summary(SummaryEntry),
+    System(SystemEntry),
+}
+
+/// User message entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TranscriptEntry {
-    #[serde(rename = "type")]
-    pub entry_type: TranscriptEntryType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub subtype: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<TranscriptMessage>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub timestamp: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tools: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub working_directory: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub token_usage: Option<TokenUsage>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cwd: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_sidechain: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+pub struct UserEntry {
+    pub uuid: String,
+    pub timestamp: String,
+    pub message: TranscriptMessage,
+    pub cwd: String,
+    pub session_id: String,
+    pub version: String,
+    pub user_type: String,
+    pub is_sidechain: bool,
     pub parent_uuid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub uuid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub leaf_uuid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub summary: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub level: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_meta: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "toolUseID")]
-    pub tool_use_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_use_result: Option<Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum TranscriptEntryType {
-    System,
-    User,
-    Assistant,
-    Result,
-    Summary,
+/// Assistant message entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantEntry {
+    pub uuid: String,
+    pub timestamp: String,
+    pub message: TranscriptMessage,
+    pub cwd: String,
+    pub session_id: String,
+    pub version: String,
+    pub user_type: String,
+    pub is_sidechain: bool,
+    pub parent_uuid: String,
+    pub request_id: String,
+}
+
+/// Summary entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SummaryEntry {
+    pub summary: String,
+    pub leaf_uuid: String,
+}
+
+/// System message entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemEntry {
+    pub uuid: String,
+    pub timestamp: String,
+    pub content: String,
+    pub cwd: String,
+    pub session_id: String,
+    pub version: String,
+    pub user_type: String,
+    pub is_sidechain: bool,
+    pub parent_uuid: String,
+    pub is_meta: bool,
+    pub level: String,
+    #[serde(rename = "toolUseID")]
+    pub tool_use_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -212,17 +217,6 @@ pub struct CodeOutput {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TokenUsage {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_tokens: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_tokens: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_tokens: Option<u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsageInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cache_creation_input_tokens: Option<u64>,
@@ -236,73 +230,94 @@ pub struct UsageInfo {
     pub service_tier: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ToolUseResultValue {
-    String(String),
-    ToolResult(ToolUseResultStruct),
-    FileRead(FileReadResult),
-    FileOperation(FileOperationResult),
-    Other(Value),
-}
+impl TranscriptEntry {
+    /// Get a brief description of the entry for logging
+    pub fn description(&self) -> String {
+        match self {
+            TranscriptEntry::System(entry) => {
+                format!("System[{}]", entry.level)
+            }
+            TranscriptEntry::User(entry) => {
+                let preview = entry
+                    .message
+                    .content
+                    .as_ref()
+                    .map(|c| {
+                        let text = c.as_text();
+                        let truncated = text.chars().take(50).collect::<String>();
+                        if text.len() > 50 {
+                            format!("{truncated}...")
+                        } else {
+                            truncated
+                        }
+                    })
+                    .unwrap_or_else(|| "No content".to_string());
+                format!("User: {preview}")
+            }
+            TranscriptEntry::Assistant(entry) => {
+                let has_thinking = entry.message.thinking.is_some();
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileReadResult {
-    #[serde(rename = "type")]
-    pub result_type: String,
-    pub file: FileInfo,
-}
+                // Count tool uses from both tool_uses field and content
+                let tool_uses_count = entry
+                    .message
+                    .tool_uses
+                    .as_ref()
+                    .map(|t| t.len())
+                    .unwrap_or(0);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ToolUseResultStruct {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<Vec<ToolResultItem>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_duration_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_tokens: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_tool_use_count: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub usage: Option<UsageInfo>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub was_interrupted: Option<bool>,
-}
+                let content_tool_count = entry
+                    .message
+                    .content
+                    .as_ref()
+                    .map(|c| c.count_tool_uses())
+                    .unwrap_or(0);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileOperationResult {
-    #[serde(rename = "type")]
-    pub operation_type: Option<String>,
-    #[serde(rename = "filePath")]
-    pub file_path: Option<String>,
-    pub content: Option<String>,
-    #[serde(rename = "structuredPatch")]
-    pub structured_patch: Option<Vec<Value>>,
-    pub file: Option<FileInfo>,
-    #[serde(rename = "oldString")]
-    pub old_string: Option<String>,
-    #[serde(rename = "newString")]
-    pub new_string: Option<String>,
-    #[serde(rename = "originalFile")]
-    pub original_file: Option<String>,
-    #[serde(rename = "userModified")]
-    pub user_modified: Option<bool>,
-    #[serde(rename = "replaceAll")]
-    pub replace_all: Option<bool>,
-}
+                let total_tool_count = tool_uses_count + content_tool_count;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileInfo {
-    #[serde(rename = "filePath")]
-    pub file_path: Option<String>,
-    pub content: Option<String>,
-    #[serde(rename = "numLines")]
-    pub num_lines: Option<u32>,
-    #[serde(rename = "startLine")]
-    pub start_line: Option<u32>,
-    #[serde(rename = "totalLines")]
-    pub total_lines: Option<u32>,
+                let code_count = entry
+                    .message
+                    .code_outputs
+                    .as_ref()
+                    .map(|c| c.len())
+                    .unwrap_or(0);
+
+                let mut parts = vec!["Assistant".to_string()];
+                if has_thinking {
+                    parts.push("with thinking".to_string());
+                }
+                if total_tool_count > 0 {
+                    parts.push(format!("{total_tool_count} tool uses"));
+                }
+                if code_count > 0 {
+                    parts.push(format!("{code_count} code outputs"));
+                }
+                parts.join(": ")
+            }
+            TranscriptEntry::Summary(entry) => {
+                format!("Summary: {}", &entry.summary)
+            }
+        }
+    }
+
+    /// Get the UUID if available
+    pub fn uuid(&self) -> Option<&str> {
+        match self {
+            TranscriptEntry::User(entry) => Some(&entry.uuid),
+            TranscriptEntry::Assistant(entry) => Some(&entry.uuid),
+            TranscriptEntry::System(entry) => Some(&entry.uuid),
+            TranscriptEntry::Summary(_) => None,
+        }
+    }
+
+    /// Get the timestamp if available
+    pub fn timestamp(&self) -> Option<&str> {
+        match self {
+            TranscriptEntry::User(entry) => Some(&entry.timestamp),
+            TranscriptEntry::Assistant(entry) => Some(&entry.timestamp),
+            TranscriptEntry::System(entry) => Some(&entry.timestamp),
+            TranscriptEntry::Summary(_) => None,
+        }
+    }
 }
 
 /// Error type for transcript parsing with detailed context
@@ -341,104 +356,6 @@ pub struct TranscriptParseResult {
     pub errors: Vec<TranscriptParseError>,
 }
 
-/// A transcript entry with its raw JSON representation
-#[derive(Debug)]
-pub struct TranscriptEntryWithRaw {
-    /// The parsed entry
-    pub entry: TranscriptEntry,
-    /// The raw JSON string from the file
-    pub raw: String,
-}
-
-/// Result of parsing a transcript with raw JSON preserved
-#[derive(Debug)]
-pub struct TranscriptParseResultWithRaw {
-    /// Successfully parsed entries with raw JSON
-    pub entries: Vec<TranscriptEntryWithRaw>,
-    /// Errors encountered during parsing (if any)
-    pub errors: Vec<TranscriptParseError>,
-}
-
-impl TranscriptEntry {
-    /// Format the entry as pretty-printed JSON for debugging
-    pub fn to_debug_json(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string_pretty(self)
-    }
-
-    /// Get a brief description of the entry for logging
-    pub fn description(&self) -> String {
-        match &self.entry_type {
-            TranscriptEntryType::System => {
-                format!("System: {}", self.subtype.as_deref().unwrap_or("init"))
-            }
-            TranscriptEntryType::User => {
-                let preview = self
-                    .message
-                    .as_ref()
-                    .and_then(|m| m.content.as_ref())
-                    .map(|c| {
-                        let text = c.as_text();
-                        let truncated = text.chars().take(50).collect::<String>();
-                        if text.len() > 50 {
-                            format!("{truncated}...")
-                        } else {
-                            truncated
-                        }
-                    })
-                    .unwrap_or_else(|| "No content".to_string());
-                format!("User: {preview}")
-            }
-            TranscriptEntryType::Assistant => {
-                let has_thinking = self
-                    .message
-                    .as_ref()
-                    .and_then(|m| m.thinking.as_ref())
-                    .is_some();
-
-                // Count tool uses from both tool_uses field and content
-                let tool_uses_count = self
-                    .message
-                    .as_ref()
-                    .and_then(|m| m.tool_uses.as_ref())
-                    .map(|t| t.len())
-                    .unwrap_or(0);
-
-                let content_tool_count = self
-                    .message
-                    .as_ref()
-                    .and_then(|m| m.content.as_ref())
-                    .map(|c| c.count_tool_uses())
-                    .unwrap_or(0);
-
-                let total_tool_count = tool_uses_count + content_tool_count;
-
-                let code_count = self
-                    .message
-                    .as_ref()
-                    .and_then(|m| m.code_outputs.as_ref())
-                    .map(|c| c.len())
-                    .unwrap_or(0);
-
-                let mut parts = vec!["Assistant".to_string()];
-                if has_thinking {
-                    parts.push("with thinking".to_string());
-                }
-                if total_tool_count > 0 {
-                    parts.push(format!("{total_tool_count} tool uses"));
-                }
-                if code_count > 0 {
-                    parts.push(format!("{code_count} code outputs"));
-                }
-                parts.join(": ")
-            }
-            TranscriptEntryType::Result => {
-                format!("Result: {}", self.status.as_deref().unwrap_or("unknown"))
-            }
-            TranscriptEntryType::Summary => "Summary".to_string(),
-        }
-    }
-}
-
 pub fn parse_transcript_line(line: &str) -> Result<TranscriptEntry, serde_json::Error> {
     serde_json::from_str(line)
 }
@@ -474,150 +391,4 @@ pub fn parse_transcript_with_context(content: &str) -> TranscriptParseResult {
     }
 
     TranscriptParseResult { entries, errors }
-}
-
-/// Format a raw JSON line for debugging display
-pub fn format_json_line_for_debug(line: &str) -> String {
-    // Try to parse and pretty-print the JSON
-    if let Ok(value) = serde_json::from_str::<Value>(line) {
-        serde_json::to_string_pretty(&value).unwrap_or_else(|_| line.to_string())
-    } else {
-        // If it's not valid JSON, return as-is
-        line.to_string()
-    }
-}
-
-/// Parse a transcript with raw JSON preserved for validation
-pub fn parse_transcript_with_raw(content: &str) -> TranscriptParseResultWithRaw {
-    let mut entries = Vec::new();
-    let mut errors = Vec::new();
-
-    for (line_idx, line) in content.lines().enumerate() {
-        if line.is_empty() {
-            continue;
-        }
-
-        match parse_transcript_line(line) {
-            Ok(entry) => {
-                entries.push(TranscriptEntryWithRaw {
-                    entry,
-                    raw: line.to_string(),
-                });
-            }
-            Err(json_error) => {
-                errors.push(TranscriptParseError {
-                    line_number: line_idx + 1,
-                    line_content: line.to_string(),
-                    json_error,
-                });
-            }
-        }
-    }
-
-    TranscriptParseResultWithRaw { entries, errors }
-}
-
-/// Convert snake_case to camelCase
-fn to_camel_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut capitalize_next = false;
-
-    for ch in s.chars() {
-        if ch == '_' {
-            capitalize_next = true;
-        } else if capitalize_next {
-            result.push(ch.to_uppercase().next().unwrap());
-            capitalize_next = false;
-        } else {
-            result.push(ch);
-        }
-    }
-
-    result
-}
-
-/// Compare two JSON values recursively to find fields that exist in `raw` but not in `parsed`
-pub fn find_missing_fields(raw: &Value, parsed: &Value, path: &[String]) -> Vec<String> {
-    let mut missing_fields = Vec::new();
-
-    match (raw, parsed) {
-        (Value::Object(raw_map), Value::Object(parsed_map)) => {
-            // Check each field in raw
-            for (key, raw_value) in raw_map {
-                // Skip null values, empty arrays, and empty strings since they are often omitted by skip_serializing_if
-                if raw_value.is_null()
-                    || (raw_value.is_array() && raw_value.as_array().is_some_and(|a| a.is_empty()))
-                    || (raw_value.is_string() && raw_value.as_str().is_some_and(|s| s.is_empty()))
-                {
-                    continue;
-                }
-
-                let mut new_path = path.to_vec();
-                new_path.push(key.clone());
-
-                // Check for exact match first
-                let found = if let Some(parsed_value) = parsed_map.get(key) {
-                    // Field exists in both, recurse
-                    missing_fields.extend(find_missing_fields(raw_value, parsed_value, &new_path));
-                    true
-                } else {
-                    // Try snake_case to camelCase conversion
-                    let camel_key = to_camel_case(key);
-                    if let Some(parsed_value) = parsed_map.get(&camel_key) {
-                        // Field exists with camelCase naming, recurse
-                        missing_fields.extend(find_missing_fields(
-                            raw_value,
-                            parsed_value,
-                            &new_path,
-                        ));
-                        true
-                    } else {
-                        false
-                    }
-                };
-
-                if !found {
-                    // Field exists in raw but not in parsed (even with case conversion)
-                    let field_path = if new_path.is_empty() {
-                        key.clone()
-                    } else {
-                        new_path.join(".")
-                    };
-                    missing_fields.push(field_path);
-                }
-            }
-        }
-        (Value::Array(raw_arr), Value::Array(parsed_arr)) => {
-            // For arrays, check each element
-            for (i, (raw_elem, parsed_elem)) in raw_arr.iter().zip(parsed_arr.iter()).enumerate() {
-                let mut new_path = path.to_vec();
-                new_path.push(format!("[{i}]"));
-                missing_fields.extend(find_missing_fields(raw_elem, parsed_elem, &new_path));
-            }
-        }
-        _ => {
-            // For other types, no fields to compare
-        }
-    }
-
-    missing_fields
-}
-
-/// Validate that a TranscriptEntry faithfully represents all fields from the raw JSON
-pub fn validate_transcript_entry(
-    entry: &TranscriptEntryWithRaw,
-) -> Result<Vec<String>, serde_json::Error> {
-    // Parse the raw JSON
-    let raw_value: Value = serde_json::from_str(&entry.raw)?;
-
-    // Serialize the entry back to JSON string
-    let entry_json = serde_json::to_string(&entry.entry)?;
-
-    // Parse the serialized entry to Value
-    let parsed_value: Value = serde_json::from_str(&entry_json)?;
-
-    // Find missing fields
-    let missing_fields = find_missing_fields(&raw_value, &parsed_value, &[]);
-
-    Ok(missing_fields)
 }

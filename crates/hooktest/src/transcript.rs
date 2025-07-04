@@ -1,132 +1,129 @@
 use crate::color::{ColorMode, JsonHighlighter};
 use anyhow::Result;
 use std::fs;
-use tenx_hooks::transcript::{
-    format_json_line_for_debug, parse_transcript_with_context, parse_transcript_with_raw,
-    validate_transcript_entry,
-};
+use tenx_hooks::transcript::{TranscriptEntry, parse_transcript_with_context};
 
 pub fn display_transcript(path: String, color_mode: ColorMode, strict: bool) -> Result<()> {
     let content = fs::read_to_string(&path)?;
+    let highlighter = JsonHighlighter::new(color_mode);
 
     if strict {
-        // Use the raw parsing mode for strict validation
-        let parse_result = parse_transcript_with_raw(&content);
-        let highlighter = JsonHighlighter::new(color_mode);
+        // Use the context parsing for detailed error information
+        let parse_result = parse_transcript_with_context(&content);
 
         // If there are parsing errors, show those first
         if !parse_result.errors.is_empty() {
-            let error = &parse_result.errors[0];
+            for error in &parse_result.errors {
+                eprintln!(
+                    "\x1b[91mError at line {}: {}\x1b[0m",
+                    error.line_number, error.json_error
+                );
 
-            eprintln!(
-                "\x1b[91mError at line {}: {}\x1b[0m",
-                error.line_number, error.json_error
-            );
+                eprintln!("\nRaw line content:");
+                eprintln!("\x1b[2m{}\x1b[0m", error.line_content);
 
-            eprintln!("\nRaw line content:");
-            eprintln!("\x1b[2m{}\x1b[0m", error.line_content);
+                // Try to pretty-print the line if it's partial JSON
+                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&error.line_content) {
+                    eprintln!("\nFormatted:");
+                    let formatted = serde_json::to_string_pretty(&value)?;
+                    highlighter.print_json(&formatted)?;
+                }
 
-            eprintln!("\nFormatted for debugging:");
-            let formatted = format_json_line_for_debug(&error.line_content);
-            highlighter.print_json(&formatted)?;
-
-            let column = error.json_error.column();
-            eprintln!("\nError location (column {column})");
-            if column > 0 {
-                let pointer = " ".repeat(column.saturating_sub(1)) + "^";
-                eprintln!("\x1b[93m{pointer}\x1b[0m");
+                let column = error.json_error.column();
+                if column > 0 {
+                    eprintln!("\nError location (column {column})");
+                    let pointer = " ".repeat(column.saturating_sub(1)) + "^";
+                    eprintln!("\x1b[93m{pointer}\x1b[0m");
+                }
+                eprintln!(); // Add blank line between errors
             }
 
+            // Exit with error code if there were parsing errors
             std::process::exit(1);
         }
 
-        // Validate each entry
-        let mut validation_errors = Vec::new();
-        for (line_number, entry_with_raw) in parse_result.entries.iter().enumerate() {
-            match validate_transcript_entry(entry_with_raw) {
-                Ok(missing_fields) => {
-                    if !missing_fields.is_empty() {
-                        validation_errors.push((line_number + 1, entry_with_raw, missing_fields));
-                    }
-                }
-                Err(e) => {
-                    eprintln!(
-                        "\x1b[91mValidation error at line {}: {}\x1b[0m",
-                        line_number + 1,
-                        e
-                    );
-                    std::process::exit(1);
-                }
-            }
-        }
+        // Display successfully parsed entries with their descriptions
+        println!(
+            "\x1b[92mSuccessfully parsed {} entries\x1b[0m",
+            parse_result.entries.len()
+        );
 
-        // Report validation errors
-        if !validation_errors.is_empty() {
-            eprintln!("\x1b[91mStrict validation failed!\x1b[0m");
-            eprintln!(
-                "\nThe following fields are present in the raw transcript but not represented in TranscriptEntry:\n"
-            );
-
-            for (line_number, entry_with_raw, missing_fields) in validation_errors {
-                eprintln!("\x1b[93mLine {line_number}:\x1b[0m");
-                for field in missing_fields {
-                    eprintln!("  - {field}");
-                }
-                eprintln!("\nRaw JSON:");
-                let formatted = format_json_line_for_debug(&entry_with_raw.raw);
-                highlighter.print_json(&formatted)?;
-                eprintln!();
-            }
-
-            std::process::exit(1);
-        }
-
-        // If validation passes, display normally
-        for (i, entry_with_raw) in parse_result.entries.iter().enumerate() {
-            if i > 0 {
-                println!();
-            }
-            let json = entry_with_raw.entry.to_debug_json()?;
-            highlighter.print_json(&json)?;
+        for (idx, entry) in parse_result.entries.iter().enumerate() {
+            println!("\x1b[94m[{}]\x1b[0m {}", idx + 1, entry.description());
         }
     } else {
-        // Non-strict mode: use the original logic
+        // Non-strict mode: parse and display what we can
         let parse_result = parse_transcript_with_context(&content);
-        let highlighter = JsonHighlighter::new(color_mode);
 
         if !parse_result.errors.is_empty() {
-            let error = &parse_result.errors[0];
-
             eprintln!(
-                "\x1b[91mError at line {}: {}\x1b[0m",
-                error.line_number, error.json_error
+                "\x1b[93mWarning: {} lines could not be parsed\x1b[0m",
+                parse_result.errors.len()
             );
-
-            eprintln!("\nRaw line content:");
-            eprintln!("\x1b[2m{}\x1b[0m", error.line_content);
-
-            eprintln!("\nFormatted for debugging:");
-            let formatted = format_json_line_for_debug(&error.line_content);
-            highlighter.print_json(&formatted)?;
-
-            let column = error.json_error.column();
-            eprintln!("\nError location (column {column})");
-            if column > 0 {
-                let pointer = " ".repeat(column.saturating_sub(1)) + "^";
-                eprintln!("\x1b[93m{pointer}\x1b[0m");
-            }
-
-            std::process::exit(1);
         }
 
-        for (i, entry) in parse_result.entries.iter().enumerate() {
-            if i > 0 {
-                println!();
+        for (line_idx, line) in content.lines().enumerate() {
+            if line.is_empty() {
+                continue;
             }
-            let json = entry.to_debug_json()?;
-            highlighter.print_json(&json)?;
+
+            // Try to parse and pretty-print each line
+            match serde_json::from_str::<serde_json::Value>(line) {
+                Ok(value) => {
+                    // Add line number
+                    println!("\x1b[2m# Line {}\x1b[0m", line_idx + 1);
+
+                    // If we can parse it as a transcript entry, show its description
+                    if let Ok(entry) = serde_json::from_value::<TranscriptEntry>(value.clone()) {
+                        println!("\x1b[94m{}\x1b[0m", entry.description());
+                    }
+
+                    // Pretty-print the JSON
+                    let pretty = serde_json::to_string_pretty(&value)?;
+                    highlighter.print_json(&pretty)?;
+                    println!(); // Blank line between entries
+                }
+                Err(e) => {
+                    // Show the parse error
+                    eprintln!("\x1b[91mError at line {}: {}\x1b[0m", line_idx + 1, e);
+                    eprintln!("\x1b[2m{line}\x1b[0m");
+                    println!();
+                }
+            }
         }
     }
 
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn validate_transcript(path: String) -> Result<()> {
+    let content = fs::read_to_string(&path)?;
+    let parse_result = parse_transcript_with_context(&content);
+
+    if parse_result.errors.is_empty() {
+        println!(
+            "\x1b[92m✓ All {} entries parsed successfully\x1b[0m",
+            parse_result.entries.len()
+        );
+        Ok(())
+    } else {
+        for error in &parse_result.errors {
+            eprintln!(
+                "\x1b[91mError at line {}: {}\x1b[0m",
+                error.line_number, error.json_error
+            );
+            eprintln!("Line content: {}", error.line_content);
+        }
+        anyhow::bail!("{} parsing errors found", parse_result.errors.len())
+    }
+}
+
+#[allow(dead_code)]
+pub fn print_entry_for_debugging(entry: &TranscriptEntry) -> Result<()> {
+    // Serialize the entry to JSON for debugging
+    let json = serde_json::to_string_pretty(entry)?;
+    let highlighter = JsonHighlighter::new(ColorMode::Auto);
+    highlighter.print_json(&json)?;
     Ok(())
 }
