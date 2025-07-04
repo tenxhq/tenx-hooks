@@ -2,9 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::io::{HookResponse, Input, is_none};
 
-// The docs are wrong. Title is never used, but we have hook_event_name instead, apparently.
-// https://github.com/anthropics/claude-code/issues/2960
-
 /// Input structure for Notification hooks.
 ///
 /// Notification hooks run when Claude Code sends notifications, allowing
@@ -23,8 +20,6 @@ pub struct Notification {
     pub message: String,
 
     /// The notification title (typically "Claude Code")
-    /// The docs are wrong. Title is never used, but we have hook_event_name instead, apparently.
-    /// https://github.com/anthropics/claude-code/issues/2960
     pub hook_event_name: String,
 }
 
