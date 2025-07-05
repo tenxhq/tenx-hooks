@@ -13,7 +13,7 @@ echo ""
     pretool \
     --sessionid safe-test-$(date +%s) \
     --tool Bash \
-    --input '{"command": "ls -la"}' \
+    --tool-input command="ls -la" \
     -- \
     ./target/debug/examples/dangerous_check
 
@@ -28,6 +28,6 @@ echo ""
     pretool \
     --sessionid danger-test-$(date +%s) \
     --tool Bash \
-    --input '{"command": "rm -rf /"}' \
+    --tool-input command="rm -rf /" \
     -- \
     ./target/debug/examples/dangerous_check
