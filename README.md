@@ -18,7 +18,8 @@ customize notifications, and more.
   validation.
 - **Notification**: Customizes how you receive notifications.
 - **Stop**: Runs when Claude finishes responding. Can request continuation.
-- **SubagentStop**: Runs when a subagent finishes responding. Same semantics as Stop but only for subagents.
+- **SubagentStop**: Runs when a subagent finishes responding. Same semantics as
+  Stop but only for subagents.
 
 
 ## Example

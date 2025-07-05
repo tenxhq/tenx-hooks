@@ -12,6 +12,7 @@ mod transcript;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use color::ColorMode;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Parser)]
 #[command(
@@ -37,9 +38,9 @@ enum Commands {
     /// Test a PreToolUse hook
     #[command(name = "pretool")]
     PreTool {
-        /// Session ID for the hook
+        /// Session ID for the hook (generated if not provided)
         #[arg(long)]
-        sessionid: String,
+        sessionid: Option<String>,
 
         /// Transcript path for the hook
         #[arg(long, default_value = "/tmp/transcript.json")]
@@ -60,9 +61,9 @@ enum Commands {
     /// Test a PostToolUse hook
     #[command(name = "posttool")]
     PostTool {
-        /// Session ID for the hook
+        /// Session ID for the hook (generated if not provided)
         #[arg(long)]
-        sessionid: String,
+        sessionid: Option<String>,
 
         /// Transcript path for the hook
         #[arg(long, default_value = "/tmp/transcript.json")]
@@ -87,9 +88,9 @@ enum Commands {
     /// Test a Notification hook
     #[command(name = "notification")]
     Notification {
-        /// Session ID for the hook
+        /// Session ID for the hook (generated if not provided)
         #[arg(long)]
-        sessionid: String,
+        sessionid: Option<String>,
 
         /// Transcript path for the hook
         #[arg(long, default_value = "/tmp/transcript.json")]
@@ -110,9 +111,9 @@ enum Commands {
     /// Test a Stop hook
     #[command(name = "stop")]
     Stop {
-        /// Session ID for the hook
+        /// Session ID for the hook (generated if not provided)
         #[arg(long)]
-        sessionid: String,
+        sessionid: Option<String>,
 
         /// Transcript path for the hook
         #[arg(long, default_value = "/tmp/transcript.json")]
@@ -129,9 +130,9 @@ enum Commands {
     /// Test a SubagentStop hook
     #[command(name = "subagentstop")]
     SubagentStop {
-        /// Session ID for the hook
+        /// Session ID for the hook (generated if not provided)
         #[arg(long)]
-        sessionid: String,
+        sessionid: Option<String>,
 
         /// Transcript path for the hook
         #[arg(long, default_value = "/tmp/transcript.json")]
@@ -170,6 +171,15 @@ enum Commands {
     },
 }
 
+/// Generate a session ID based on current timestamp
+fn generate_session_id() -> String {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    format!("test-session-{}", timestamp)
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let color_mode = ColorMode::from_flags(cli.color, cli.no_color);
@@ -182,7 +192,8 @@ fn main() -> Result<()> {
             input,
             hook_args,
         } => {
-            pretool::run_pretooluse_hook(sessionid, transcript, tool, input, hook_args, color_mode)
+            let session_id = sessionid.unwrap_or_else(generate_session_id);
+            pretool::run_pretooluse_hook(session_id, transcript, tool, input, hook_args, color_mode)
         }
         Commands::PostTool {
             sessionid,
@@ -191,32 +202,44 @@ fn main() -> Result<()> {
             input,
             response,
             hook_args,
-        } => posttool::run_posttooluse_hook(
-            sessionid, transcript, tool, input, response, hook_args, color_mode,
-        ),
+        } => {
+            let session_id = sessionid.unwrap_or_else(generate_session_id);
+            posttool::run_posttooluse_hook(
+                session_id, transcript, tool, input, response, hook_args, color_mode,
+            )
+        }
         Commands::Notification {
             sessionid,
             transcript,
             message,
             title,
             hook_args,
-        } => notification::run_notification_hook(
-            sessionid, transcript, message, title, hook_args, color_mode,
-        ),
+        } => {
+            let session_id = sessionid.unwrap_or_else(generate_session_id);
+            notification::run_notification_hook(
+                session_id, transcript, message, title, hook_args, color_mode,
+            )
+        }
         Commands::Stop {
             sessionid,
             transcript,
             active,
             hook_args,
-        } => stop::run_stop_hook(sessionid, transcript, active, hook_args, color_mode),
+        } => {
+            let session_id = sessionid.unwrap_or_else(generate_session_id);
+            stop::run_stop_hook(session_id, transcript, active, hook_args, color_mode)
+        }
         Commands::SubagentStop {
             sessionid,
             transcript,
             active,
             hook_args,
-        } => subagent_stop::run_subagent_stop_hook(
-            sessionid, transcript, active, hook_args, color_mode,
-        ),
+        } => {
+            let session_id = sessionid.unwrap_or_else(generate_session_id);
+            subagent_stop::run_subagent_stop_hook(
+                session_id, transcript, active, hook_args, color_mode,
+            )
+        }
         Commands::Log {
             event,
             filepath,
