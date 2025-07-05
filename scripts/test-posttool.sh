@@ -16,8 +16,8 @@ echo "-------------------------------------------"
 cargo run --bin hooktest -- posttool \
     --sessionid "test-123" \
     --tool "Bash" \
-    --input '{"command": "ls -la"}' \
-    --response '{"output": "total 24\ndrwxr-xr-x  2 user user 4096 Jan 1 12:00 .\n"}' \
+    --tool-input command="ls -la" \
+    --tool-response output="total 24\ndrwxr-xr-x  2 user user 4096 Jan 1 12:00 .\n" \
     -- target/debug/examples/posttool_logger
 
 echo
@@ -29,8 +29,8 @@ echo "-------------------------------------------------"
 cargo run --bin hooktest -- posttool \
     --sessionid "test-456" \
     --tool "Bash" \
-    --input '{"command": "export DB_PASSWORD=secret123"}' \
-    --response '{"output": ""}' \
+    --tool-input command="export DB_PASSWORD=secret123" \
+    --tool-response output="" \
     -- target/debug/examples/posttool_logger
 
 echo
@@ -42,6 +42,6 @@ echo "-----------------------------"
 cargo run --bin hooktest -- posttool \
     --sessionid "test-789" \
     --tool "Read" \
-    --input '{"file_path": "/etc/hosts"}' \
-    --response '{"content": "127.0.0.1 localhost\n"}' \
+    --tool-input file_path="/etc/hosts" \
+    --tool-response content="127.0.0.1 localhost\n" \
     -- target/debug/examples/posttool_logger

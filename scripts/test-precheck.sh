@@ -6,6 +6,6 @@ cargo build --example precheck --quiet
     pretool \
     --sessionid test-session-$(date +%s) \
     --tool Bash \
-    --input '{"command": "echo Hello from hooktest!"}' \
+    --tool-input command="echo Hello from hooktest!" \
     -- \
     ./target/debug/examples/precheck

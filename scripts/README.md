@@ -18,12 +18,6 @@ Tests the `dangerous_check` example with both safe and dangerous commands to dem
 ./scripts/test-dangerous.sh
 ```
 
-### test-with-cargo.sh
-Shows how to use `hooktest` with `cargo run` during development, useful when you're actively working on hooks.
-
-```bash
-./scripts/test-with-cargo.sh
-```
 
 ## Usage
 
