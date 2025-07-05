@@ -1,5 +1,6 @@
 mod color;
 mod execute;
+mod input;
 mod log;
 mod notification;
 mod output;
@@ -50,9 +51,13 @@ enum Commands {
         #[arg(long, default_value = "Bash")]
         tool: String,
 
-        /// Tool input as JSON string
-        #[arg(long, default_value = r#"{"command": "echo 'test'"}"#)]
-        input: String,
+        /// Tool input as key=value pairs (e.g., --tool-input command="echo hello")
+        #[arg(long = "tool-input", value_name = "KEY=VALUE")]
+        tool_input: Vec<String>,
+
+        /// Tool input as key=json pairs (e.g., --tool-input-json args='["one", "two"]')
+        #[arg(long = "tool-input-json", value_name = "KEY=JSON")]
+        tool_input_json: Vec<String>,
 
         /// Hook command and arguments (everything after --)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -73,13 +78,21 @@ enum Commands {
         #[arg(long, default_value = "Bash")]
         tool: String,
 
-        /// Tool input as JSON string
-        #[arg(long, default_value = r#"{"command": "echo 'test'"}"#)]
-        input: String,
+        /// Tool input as key=value pairs (e.g., --tool-input command="echo hello")
+        #[arg(long = "tool-input", value_name = "KEY=VALUE")]
+        tool_input: Vec<String>,
 
-        /// Tool response as JSON string
-        #[arg(long, default_value = r#"{"output": "test\n"}"#)]
-        response: String,
+        /// Tool input as key=json pairs (e.g., --tool-input-json args='["one", "two"]')
+        #[arg(long = "tool-input-json", value_name = "KEY=JSON")]
+        tool_input_json: Vec<String>,
+
+        /// Tool response as key=value pairs (e.g., --tool-response output="test")
+        #[arg(long = "tool-response", value_name = "KEY=VALUE")]
+        tool_response: Vec<String>,
+
+        /// Tool response as key=json pairs (e.g., --tool-response-json exitCode=0)
+        #[arg(long = "tool-response-json", value_name = "KEY=JSON")]
+        tool_response_json: Vec<String>,
 
         /// Hook command and arguments (everything after --)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -189,23 +202,87 @@ fn main() -> Result<()> {
             sessionid,
             transcript,
             tool,
-            input,
+            tool_input,
+            tool_input_json,
             hook_args,
         } => {
             let session_id = sessionid.unwrap_or_else(generate_session_id);
-            pretool::run_pretooluse_hook(session_id, transcript, tool, input, hook_args, color_mode)
+
+            // Handle tool input
+            let tool_input_map = if tool_input.is_empty() && tool_input_json.is_empty() {
+                // No inputs provided, use default based on tool
+                let mut default_map = std::collections::HashMap::new();
+                if tool == "Bash" {
+                    default_map.insert(
+                        "command".to_string(),
+                        serde_json::Value::String("echo 'test'".to_string()),
+                    );
+                }
+                default_map
+            } else {
+                // Combine tool-input and tool-input-json
+                input::combine_inputs(None, &tool_input, &tool_input_json)?
+            };
+
+            pretool::run_pretooluse_hook(
+                session_id,
+                transcript,
+                tool,
+                tool_input_map,
+                hook_args,
+                color_mode,
+            )
         }
         Commands::PostTool {
             sessionid,
             transcript,
             tool,
-            input,
-            response,
+            tool_input,
+            tool_input_json,
+            tool_response,
+            tool_response_json,
             hook_args,
         } => {
             let session_id = sessionid.unwrap_or_else(generate_session_id);
+
+            // Handle tool input
+            let tool_input_map = if tool_input.is_empty() && tool_input_json.is_empty() {
+                // No inputs provided, use default based on tool
+                let mut default_map = std::collections::HashMap::new();
+                if tool == "Bash" {
+                    default_map.insert(
+                        "command".to_string(),
+                        serde_json::Value::String("echo 'test'".to_string()),
+                    );
+                }
+                default_map
+            } else {
+                // Combine tool-input and tool-input-json
+                input::combine_inputs(None, &tool_input, &tool_input_json)?
+            };
+
+            // Handle tool response
+            let tool_response_map = if tool_response.is_empty() && tool_response_json.is_empty() {
+                // No response provided, use default
+                let mut default_map = std::collections::HashMap::new();
+                default_map.insert(
+                    "output".to_string(),
+                    serde_json::Value::String("test\n".to_string()),
+                );
+                default_map
+            } else {
+                // Combine tool-response and tool-response-json
+                input::combine_inputs(None, &tool_response, &tool_response_json)?
+            };
+
             posttool::run_posttooluse_hook(
-                session_id, transcript, tool, input, response, hook_args, color_mode,
+                session_id,
+                transcript,
+                tool,
+                tool_input_map,
+                tool_response_map,
+                hook_args,
+                color_mode,
             )
         }
         Commands::Notification {

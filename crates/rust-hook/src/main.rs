@@ -114,20 +114,22 @@ fn get_edited_rust_files(input: &Stop) -> Result<Vec<String>> {
 
     for entry in transcript {
         if let TranscriptEntry::Assistant(assistant_entry) = entry {
-            if let TranscriptMessage::Assistant { tool_uses, .. } = assistant_entry.message {
-                if let Some(tool_uses) = tool_uses {
-                    for tool_use in tool_uses {
-                        if tool_use.tool_name == "Edit" || tool_use.tool_name == "MultiEdit" {
-                            if let Some(file_path) = tool_use
-                                .tool_input
-                                .get("file_path")
-                                .and_then(|v| v.as_str())
+            if let TranscriptMessage::Assistant {
+                tool_uses: Some(tool_uses),
+                ..
+            } = assistant_entry.message
+            {
+                for tool_use in tool_uses {
+                    if tool_use.tool_name == "Edit" || tool_use.tool_name == "MultiEdit" {
+                        if let Some(file_path) = tool_use
+                            .tool_input
+                            .get("file_path")
+                            .and_then(|v| v.as_str())
+                        {
+                            if file_path.ends_with(".rs")
+                                && !rust_files.contains(&file_path.to_string())
                             {
-                                if file_path.ends_with(".rs")
-                                    && !rust_files.contains(&file_path.to_string())
-                                {
-                                    rust_files.push(file_path.to_string());
-                                }
+                                rust_files.push(file_path.to_string());
                             }
                         }
                     }

@@ -9,17 +9,12 @@ pub fn run_posttooluse_hook(
     session_id: String,
     transcript_path: String,
     tool_name: String,
-    tool_input_str: String,
-    tool_response_str: String,
+    tool_input: HashMap<String, serde_json::Value>,
+    tool_response: HashMap<String, serde_json::Value>,
     hook_args: Vec<String>,
     color_mode: ColorMode,
 ) -> Result<()> {
     let mut out = Output::new(color_mode);
-
-    // Parse the tool input and response JSON into HashMaps
-    let tool_input: HashMap<String, serde_json::Value> = serde_json::from_str(&tool_input_str)?;
-    let tool_response: HashMap<String, serde_json::Value> =
-        serde_json::from_str(&tool_response_str)?;
 
     // Create the hook input using the PostToolUse struct
     let hook_input = PostToolUse {
