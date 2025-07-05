@@ -1,10 +1,92 @@
-use crate::color::{ColorMode, JsonHighlighter};
 use anyhow::Result;
+use clap::Parser;
 use claude_transcript::TranscriptEntry;
 use claude_transcript::parse::parse_transcript_with_context;
 use std::fs;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{Style, ThemeSet};
+use syntect::parsing::SyntaxSet;
+use syntect::util::as_24_bit_terminal_escaped;
 
-pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, strict: bool) -> Result<()> {
+#[derive(Clone, Copy)]
+pub enum ColorMode {
+    Always,
+    Never,
+    Auto,
+}
+
+impl ColorMode {
+    pub fn from_flags(color: bool, no_color: bool) -> Self {
+        if color {
+            ColorMode::Always
+        } else if no_color {
+            ColorMode::Never
+        } else {
+            ColorMode::Auto
+        }
+    }
+
+    pub fn should_colorize(&self) -> bool {
+        match self {
+            ColorMode::Always => true,
+            ColorMode::Never => false,
+            ColorMode::Auto => atty::is(atty::Stream::Stdout),
+        }
+    }
+}
+
+pub struct JsonHighlighter {
+    ps: SyntaxSet,
+    ts: ThemeSet,
+    enabled: bool,
+}
+
+impl JsonHighlighter {
+    pub fn new(color_mode: ColorMode) -> Self {
+        Self {
+            ps: SyntaxSet::load_defaults_newlines(),
+            ts: ThemeSet::load_defaults(),
+            enabled: color_mode.should_colorize(),
+        }
+    }
+
+    pub fn print_json(&self, json: &str) -> Result<()> {
+        if self.enabled {
+            let syntax = self.ps.find_syntax_by_extension("json").unwrap();
+            let mut h = HighlightLines::new(syntax, &self.ts.themes["base16-ocean.dark"]);
+
+            for line in json.lines() {
+                let ranges: Vec<(Style, &str)> = h.highlight_line(line, &self.ps)?;
+                let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
+                println!("{escaped}");
+            }
+        } else {
+            print!("{json}");
+        }
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+#[command(name = "ttest", about = "Format and display transcript files", version)]
+struct Cli {
+    /// Enable colored output
+    #[arg(long, global = true, conflicts_with = "no_color")]
+    color: bool,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
+
+    /// Enable verification mode (only outputs validation errors)
+    #[arg(long)]
+    verify: bool,
+
+    /// Paths to the transcript JSONL files
+    paths: Vec<String>,
+}
+
+pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, verify: bool) -> Result<()> {
     if paths.is_empty() {
         anyhow::bail!("No transcript files specified");
     }
@@ -13,7 +95,7 @@ pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, strict: bo
     let mut had_errors = false;
 
     for (file_idx, path) in paths.iter().enumerate() {
-        if multiple_files {
+        if multiple_files && !verify {
             // Print file header
             if file_idx > 0 {
                 println!(); // Blank line between files
@@ -21,69 +103,47 @@ pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, strict: bo
             println!("\x1b[1;36m=== {path} ===\x1b[0m");
         }
 
-        match display_single_transcript(path.clone(), color_mode, strict) {
+        match display_single_transcript(path.clone(), color_mode, verify) {
             Ok(()) => {}
             Err(e) => {
-                eprintln!("\x1b[91mError processing {path}: {e}\x1b[0m");
+                if verify {
+                    eprintln!("{path}: {e}");
+                } else {
+                    eprintln!("\x1b[91mError processing {path}: {e}\x1b[0m");
+                }
                 had_errors = true;
-                if strict {
+                if verify {
                     std::process::exit(1);
                 }
             }
         }
     }
 
-    if had_errors && !strict {
+    if had_errors && !verify {
         std::process::exit(1);
     }
 
     Ok(())
 }
 
-fn display_single_transcript(path: String, color_mode: ColorMode, strict: bool) -> Result<()> {
+fn display_single_transcript(path: String, color_mode: ColorMode, verify: bool) -> Result<()> {
     let content = fs::read_to_string(&path)?;
     let highlighter = JsonHighlighter::new(color_mode);
 
-    if strict {
+    if verify {
         // Use the context parsing for detailed error information
         let parse_result = parse_transcript_with_context(&content);
 
-        // If there are parsing errors, show those first
+        // If there are parsing errors, show those
         if !parse_result.errors.is_empty() {
             for error in &parse_result.errors {
-                eprintln!(
-                    "\x1b[91mError at line {}: {}\x1b[0m",
-                    error.line_number, error.json_error
-                );
-
-                eprintln!("\nRaw line content:");
-                eprintln!("\x1b[2m{}\x1b[0m", error.line_content);
-
-                // Try to pretty-print the line if it's partial JSON
-                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&error.line_content) {
-                    eprintln!("\nFormatted:");
-                    let formatted = serde_json::to_string_pretty(&value)?;
-                    highlighter.print_json(&formatted)?;
-                }
-
-                let column = error.json_error.column();
-                if column > 0 {
-                    eprintln!("\nError location (column {column})");
-                    let pointer = " ".repeat(column.saturating_sub(1)) + "^";
-                    eprintln!("\x1b[93m{pointer}\x1b[0m");
-                }
-                eprintln!(); // Add blank line between errors
+                eprintln!("{}:{}: {}", path, error.line_number, error.json_error);
             }
 
             // Exit with error code if there were parsing errors
             std::process::exit(1);
         }
-
-        // Display successfully parsed entries with their descriptions
-        println!(
-            "\x1b[92mSuccessfully parsed {} entries\x1b[0m",
-            parse_result.entries.len()
-        );
+        // In verify mode, output nothing if validation passes
     } else {
         // Non-strict mode: parse and display what we can
         let parse_result = parse_transcript_with_context(&content);
@@ -135,40 +195,9 @@ fn display_single_transcript(path: String, color_mode: ColorMode, strict: bool) 
     Ok(())
 }
 
-#[allow(dead_code)]
-pub fn validate_transcript(path: String) -> Result<()> {
-    let content = fs::read_to_string(&path)?;
-    let parse_result = parse_transcript_with_context(&content);
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+    let color_mode = ColorMode::from_flags(cli.color, cli.no_color);
 
-    if parse_result.errors.is_empty() {
-        println!(
-            "\x1b[92m✓ All {} entries parsed successfully\x1b[0m",
-            parse_result.entries.len()
-        );
-        Ok(())
-    } else {
-        for error in &parse_result.errors {
-            eprintln!(
-                "\x1b[91mError at line {}: {}\x1b[0m",
-                error.line_number, error.json_error
-            );
-            eprintln!("Line content: {}", error.line_content);
-        }
-        anyhow::bail!("{} parsing errors found", parse_result.errors.len())
-    }
-}
-
-#[allow(dead_code)]
-pub fn print_entry_for_debugging(entry: &TranscriptEntry) -> Result<()> {
-    // Serialize the entry to JSON for debugging
-    let json = serde_json::to_string_pretty(entry)?;
-    let highlighter = JsonHighlighter::new(ColorMode::Auto);
-    highlighter.print_json(&json)?;
-    Ok(())
-}
-
-// Re-export for backwards compatibility
-#[allow(dead_code)]
-pub fn display_transcript(path: String, color_mode: ColorMode, strict: bool) -> Result<()> {
-    display_transcripts(vec![path], color_mode, strict)
+    display_transcripts(cli.paths, color_mode, cli.verify)
 }

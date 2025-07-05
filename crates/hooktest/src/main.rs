@@ -8,7 +8,6 @@ mod posttool;
 mod pretool;
 mod stop;
 mod subagent_stop;
-mod transcript;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -172,16 +171,6 @@ enum Commands {
         #[arg(long)]
         transcript: Option<String>,
     },
-    /// Format and display transcript files
-    #[command(name = "transcript")]
-    Transcript {
-        /// Paths to the transcript JSONL files
-        paths: Vec<String>,
-
-        /// Enable strict validation to check for missing fields
-        #[arg(long)]
-        strict: bool,
-    },
 }
 
 /// Generate a session ID based on current timestamp
@@ -322,8 +311,5 @@ fn main() -> Result<()> {
             filepath,
             transcript,
         } => log::run_log_hook(event, filepath, transcript, color_mode),
-        Commands::Transcript { paths, strict } => {
-            transcript::display_transcripts(paths, color_mode, strict)
-        }
     }
 }

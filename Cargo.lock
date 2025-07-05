@@ -161,8 +161,12 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 name = "claude-transcript"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
+ "atty",
+ "clap",
  "serde",
  "serde_json",
+ "syntect",
 ]
 
 [[package]]
