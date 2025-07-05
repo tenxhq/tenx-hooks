@@ -1,45 +1,41 @@
-# code-hooks
+# Code Hooks
 
-A Rust library for building hooks for [Claude Code](https://claude.ai/code),
-Anthropic's official CLI for Claude.
+Rust toolkit for building hooks for [Claude Code](https://claude.ai/code).
+Hooks are shell commands that execute at various points in Claude Code's
+lifecycle.
 
-## Overview
+## Crates
 
-`code-hooks` provides a type-safe way to write hooks that extend Claude Code's
-functionality. Hooks are shell commands that execute at various points in
-Claude Code's lifecycle, enabling you to automate formatting, enforce policies,
-customize notifications, and more.
+- **[code-hooks](./crates/code-hooks/)**: Core library for building Claude Code
+  hooks
+- **[claude-transcript](./crates/claude-transcript/)**: Parse and analyze
+  Claude conversation transcripts  
+- **[hooktest](./crates/hooktest/)**: Test hooks during development
+- **[rust-hook](./crates/rust-hook/)**: Example hook that formats and lints
+  Rust code
 
-
-## Hook Events
-
-- **PreToolUse**: Runs before tool execution. Can approve or block operations.
-- **PostToolUse**: Runs after tool execution. Perfect for formatting or
-  validation.
-- **Notification**: Customizes how you receive notifications.
-- **Stop**: Runs when Claude finishes responding. Can request continuation.
-- **SubagentStop**: Runs when a subagent finishes responding. Same semantics as
-  Stop but only for subagents.
-
-
-## Example
+## Quick Start
 
 ```rust
-use code_hooks::{HookResponse, Input, PreToolUse, Result};
+use code_hooks::*;
 
 fn main() -> Result<()> {
     let input = PreToolUse::read()?;
-
-    // Log some info to stderr for debugging (won't interfere with JSON output)
-    eprintln!("Hook received tool: {}", input.tool_name);
-    eprintln!("Session ID: {}", input.session_id);
-
-    input.approve("Command looks safe").respond();
+    
+    if input.tool_name == "Bash" {
+        if let Some(cmd) = input.tool_input.get("command").and_then(|v| v.as_str()) {
+            if cmd.contains("rm -rf /") {
+                return input.block("Dangerous command").respond();
+            }
+        }
+    }
+    
+    input.approve("OK").respond()
 }
 ```
 
+Test with hooktest:
+```bash
+hooktest pretool --tool Bash --tool-input command="ls" -- ./my-hook
+```
 
-
-## Related
-
-- [Claude Code Hooks Guide](https://docs.anthropic.com/en/docs/claude-code/hooks)
