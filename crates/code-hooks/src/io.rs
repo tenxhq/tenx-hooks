@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::transcript::TranscriptEntry;
+use claude_transcript::TranscriptEntry;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 use std::process;
@@ -14,7 +14,7 @@ use std::process;
 /// # Example
 ///
 /// ```rust,no_run
-/// use tenx_hooks::{Input, PreToolUse};
+/// use code_hooks::{Input, PreToolUse};
 ///
 /// let input = PreToolUse::read().expect("Failed to read input");
 /// println!("Tool name: {}", input.tool_name);
@@ -39,7 +39,7 @@ pub trait Input: for<'de> Deserialize<'de> + Sized {
 /// # Example
 ///
 /// ```no_run
-/// use tenx_hooks::{HookResponse, PreToolUseOutput};
+/// use code_hooks::{HookResponse, PreToolUseOutput};
 ///
 /// let response = PreToolUseOutput::approve("Looks good");
 /// response.respond(); // Prints JSON and exits

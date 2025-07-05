@@ -1,4 +1,4 @@
-use crate::transcript::TranscriptEntry;
+use crate::TranscriptEntry;
 use serde_json;
 use std::fmt;
 

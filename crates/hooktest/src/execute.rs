@@ -63,7 +63,7 @@ pub fn execute_hook(
 
     if !output.stderr.is_empty() {
         out.h1("STDERR")?;
-        out.dimmed(String::from_utf8_lossy(&output.stderr).trim_end())?;
+        out.block(String::from_utf8_lossy(&output.stderr).trim_end())?;
     }
 
     if output.status.success() && !output.stdout.is_empty() {

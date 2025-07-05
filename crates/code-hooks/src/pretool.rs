@@ -5,8 +5,8 @@ use std::fs;
 
 use crate::Result;
 use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
-use crate::parse::parse_transcript;
-use crate::transcript::TranscriptEntry;
+use claude_transcript::TranscriptEntry;
+use claude_transcript::parse::parse_transcript;
 
 /// Input structure for PreToolUse hooks.
 ///

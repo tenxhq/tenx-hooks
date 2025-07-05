@@ -190,7 +190,7 @@ fn generate_session_id() -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    format!("test-session-{}", timestamp)
+    format!("test-session-{timestamp}")
 }
 
 fn main() -> Result<()> {

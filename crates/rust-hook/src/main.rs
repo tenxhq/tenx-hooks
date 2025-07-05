@@ -1,7 +1,6 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use code_hooks::{HookResponse, Input, PostToolUse, PostToolUseOutput, Stop, TranscriptReader};
-use std::path::Path;
 use std::process::Command;
 
 #[derive(Parser)]
@@ -30,10 +29,13 @@ fn main() -> Result<()> {
 }
 
 fn handle_posttool() -> Result<()> {
+    eprintln!("[rust-hook] Starting posttool handler");
     let input = PostToolUse::read()?;
+    eprintln!("[rust-hook] Tool: {}", input.tool_name);
 
     // Only process Edit and MultiEdit tools
     if input.tool_name != "Edit" && input.tool_name != "MultiEdit" {
+        eprintln!("[rust-hook] Not an Edit/MultiEdit tool, passing through");
         PostToolUseOutput::passthrough().respond();
     }
 
@@ -42,74 +44,66 @@ fn handle_posttool() -> Result<()> {
         .tool_response
         .get("filePath")
         .and_then(|v| v.as_str())
-        .context("Failed to get file path from tool response")?;
+        .unwrap_or("");
+    eprintln!("[rust-hook] File path: {file_path}");
 
     // Check if the file is a Rust file
     if !file_path.ends_with(".rs") {
+        eprintln!("[rust-hook] Not a Rust file, passing through");
         PostToolUseOutput::passthrough().respond();
     }
 
-    // Check if the file exists
-    if !Path::new(file_path).exists() {
-        PostToolUseOutput::passthrough().respond();
-    }
+    eprintln!("[rust-hook] Processing Rust file: {file_path}");
 
-    // Run formatting and linting
-    let feedback_messages = run_rust_tools(file_path)?;
+    // Run formatting and linting on the entire project
+    let feedback_messages = run_rust_tools()?;
 
-    // If there are any feedback messages, block and provide feedback
     if !feedback_messages.is_empty() {
-        PostToolUseOutput::block(&feedback_messages.join("\n\n")).respond();
+        eprintln!(
+            "[rust-hook] Found {} issues, blocking",
+            feedback_messages.len()
+        );
+        PostToolUseOutput::block(&feedback_messages.join("\n\n")).respond()
+    } else {
+        eprintln!("[rust-hook] No issues found, passing through");
+        PostToolUseOutput::passthrough().respond()
     }
-
-    // Otherwise, pass through
-    PostToolUseOutput::passthrough().respond();
 }
 
 fn handle_stop() -> Result<()> {
+    eprintln!("[rust-hook] Starting stop handler");
     let input = Stop::read()?;
 
-    // Get all Rust files that were edited in this session
-    let rust_files = get_edited_rust_files(&input)?;
-
-    if rust_files.is_empty() {
+    // Check if any Rust files were edited in this session
+    if !has_edited_rust_files(&input)? {
+        eprintln!("[rust-hook] No Rust files edited, allowing stop");
         input.allow().respond();
     }
 
-    let mut all_feedback = Vec::new();
+    eprintln!("[rust-hook] Rust files were edited, checking project");
 
-    // Run formatting and linting on each file
-    for file_path in &rust_files {
-        if Path::new(file_path).exists() {
-            let feedback_messages = run_rust_tools(file_path)?;
-            if !feedback_messages.is_empty() {
-                all_feedback.push(format!(
-                    "Issues in {}:\n{}",
-                    file_path,
-                    feedback_messages.join("\n")
-                ));
-            }
-        }
-    }
+    // Run formatting and linting on the entire project
+    let feedback_messages = run_rust_tools()?;
 
-    // If there are any issues, ask Claude to continue and fix them
-    if !all_feedback.is_empty() {
+    if !feedback_messages.is_empty() {
+        eprintln!(
+            "[rust-hook] Found {} issues, blocking stop",
+            feedback_messages.len()
+        );
         let message = format!(
             "Rust formatting/linting issues found:\n\n{}\n\nPlease fix these issues.",
-            all_feedback.join("\n\n")
+            feedback_messages.join("\n\n")
         );
-        input.block(&message).respond();
+        input.block(&message).respond()
+    } else {
+        eprintln!("[rust-hook] No issues found, allowing stop");
+        input.allow().respond()
     }
-
-    input.allow().respond();
 }
 
-fn get_edited_rust_files(input: &Stop) -> Result<Vec<String>> {
-    use code_hooks::transcript::{TranscriptEntry, TranscriptMessage};
+fn has_edited_rust_files(input: &Stop) -> Result<bool> {
+    use claude_transcript::{TranscriptEntry, TranscriptMessage};
 
-    let mut rust_files = Vec::new();
-
-    // Read the transcript to find all edited Rust files
     let transcript = input.read_transcript()?;
 
     for entry in transcript {
@@ -126,10 +120,9 @@ fn get_edited_rust_files(input: &Stop) -> Result<Vec<String>> {
                             .get("file_path")
                             .and_then(|v| v.as_str())
                         {
-                            if file_path.ends_with(".rs")
-                                && !rust_files.contains(&file_path.to_string())
-                            {
-                                rust_files.push(file_path.to_string());
+                            if file_path.ends_with(".rs") {
+                                eprintln!("[rust-hook] Found edited Rust file: {file_path}");
+                                return Ok(true);
                             }
                         }
                     }
@@ -138,79 +131,70 @@ fn get_edited_rust_files(input: &Stop) -> Result<Vec<String>> {
         }
     }
 
-    Ok(rust_files)
+    Ok(false)
 }
 
-fn run_rust_tools(file_path: &str) -> Result<Vec<String>> {
-    let project_root = find_project_root(file_path);
+fn run_rust_tools() -> Result<Vec<String>> {
     let mut feedback_messages = Vec::new();
 
-    // Run cargo fmt
-    match run_cargo_fmt(&project_root, file_path) {
+    // Run cargo fmt --all
+    eprintln!("[rust-hook] Running cargo fmt...");
+    match run_cargo_fmt() {
         Ok(output) => {
             if !output.success {
-                feedback_messages.push(format!(
-                    "cargo fmt failed:\n{}",
-                    String::from_utf8_lossy(&output.stderr)
-                ));
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("[rust-hook] cargo fmt failed with output:\n{stderr}");
+                feedback_messages.push(format!("cargo fmt failed:\n{stderr}"));
+            } else {
+                eprintln!("[rust-hook] cargo fmt succeeded");
             }
         }
         Err(e) => {
+            eprintln!("[rust-hook] Error running cargo fmt: {e}");
             feedback_messages.push(format!("Failed to run cargo fmt: {e}"));
         }
     }
 
-    // Run cargo clippy --fix --allow-dirty
-    match run_cargo_clippy(&project_root) {
+    // Run cargo clippy
+    eprintln!("[rust-hook] Running cargo clippy...");
+    match run_cargo_clippy() {
         Ok(output) => {
             if !output.success {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                // Check if there are warnings (clippy returns non-zero exit code for warnings)
-                if stderr.contains("warning") {
-                    feedback_messages.push(format!("cargo clippy found warnings:\n{stderr}"));
-                } else {
-                    feedback_messages.push(format!("cargo clippy failed:\n{stderr}"));
-                }
+                eprintln!("[rust-hook] cargo clippy found issues:\n{stderr}");
+                feedback_messages.push(format!("cargo clippy found warnings:\n{stderr}"));
+            } else {
+                eprintln!("[rust-hook] cargo clippy succeeded");
             }
         }
         Err(e) => {
+            eprintln!("[rust-hook] Error running cargo clippy: {e}");
             feedback_messages.push(format!("Failed to run cargo clippy: {e}"));
         }
     }
 
+    eprintln!(
+        "[rust-hook] Total feedback messages: {}",
+        feedback_messages.len()
+    );
     Ok(feedback_messages)
 }
 
-fn find_project_root(file_path: &str) -> String {
-    let path = Path::new(file_path);
-    let mut current = path.parent();
-
-    while let Some(dir) = current {
-        if dir.join("Cargo.toml").exists() {
-            return dir.to_string_lossy().to_string();
-        }
-        current = dir.parent();
-    }
-
-    // If no Cargo.toml found, use the directory containing the file
-    path.parent()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| ".".to_string())
-}
-
+// Simple struct to hold command output
 struct CommandOutput {
     success: bool,
     stderr: Vec<u8>,
 }
 
-fn run_cargo_fmt(project_root: &str, file_path: &str) -> Result<CommandOutput> {
-    let output = Command::new("cargo")
-        .arg("fmt")
-        .arg("--")
-        .arg(file_path)
-        .current_dir(project_root)
-        .output()
-        .context("Failed to execute cargo fmt")?;
+fn run_cargo_fmt() -> Result<CommandOutput> {
+    let mut cmd = Command::new("cargo");
+    cmd.args(["fmt", "--all"]);
+
+    log_command(&cmd, ".", "cargo fmt --all");
+
+    let output = cmd.output()?;
+
+    log_command_result(&output, "cargo fmt");
 
     Ok(CommandOutput {
         success: output.status.success(),
@@ -218,15 +202,53 @@ fn run_cargo_fmt(project_root: &str, file_path: &str) -> Result<CommandOutput> {
     })
 }
 
-fn run_cargo_clippy(project_root: &str) -> Result<CommandOutput> {
-    let output = Command::new("cargo")
-        .args(["clippy", "--fix", "--allow-dirty", "--", "-D", "warnings"])
-        .current_dir(project_root)
-        .output()
-        .context("Failed to execute cargo clippy")?;
+fn run_cargo_clippy() -> Result<CommandOutput> {
+    let mut cmd = Command::new("cargo");
+    cmd.args(["clippy", "--tests", "--examples", "--fix", "--allow-dirty"]);
+
+    log_command(
+        &cmd,
+        ".",
+        "cargo clippy --tests --examples --fix --allow-dirty",
+    );
+
+    let output = cmd.output()?;
+
+    log_command_result(&output, "cargo clippy");
+
+    // Check if there are any warnings in stderr, even if clippy exited successfully
+    let stderr_str = String::from_utf8_lossy(&output.stderr);
+    let has_warnings = stderr_str.contains("warning:") || stderr_str.contains("error:");
 
     Ok(CommandOutput {
-        success: output.status.success(),
+        success: !has_warnings,
         stderr: output.stderr,
     })
+}
+
+// Helper function to log command details
+fn log_command(cmd: &Command, working_dir: &str, shell_cmd: &str) {
+    eprintln!("[rust-hook] Full command: {cmd:?}");
+    eprintln!("[rust-hook] Working directory: {working_dir}");
+    eprintln!("[rust-hook] Equivalent shell command: {shell_cmd}");
+}
+
+// Helper function to log command output
+fn log_command_result(output: &std::process::Output, cmd_name: &str) {
+    let exit_code = output.status.code().unwrap_or(-1);
+    eprintln!("[rust-hook] {cmd_name} exit code: {exit_code}");
+
+    if !output.stdout.is_empty() {
+        eprintln!(
+            "[rust-hook] {cmd_name} stdout:\n{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+
+    if !output.stderr.is_empty() {
+        eprintln!(
+            "[rust-hook] {cmd_name} stderr:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }

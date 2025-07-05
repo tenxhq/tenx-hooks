@@ -32,12 +32,10 @@
 mod error;
 mod io;
 mod notification;
-pub mod parse;
 mod posttool;
 mod pretool;
 mod stop;
 mod subagent_stop;
-pub mod transcript;
 
 pub use error::{Error, Result};
 pub use io::{Decision, HookResponse, Input, TranscriptReader};

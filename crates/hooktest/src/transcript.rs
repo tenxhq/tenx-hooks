@@ -1,7 +1,7 @@
 use crate::color::{ColorMode, JsonHighlighter};
 use anyhow::Result;
-use code_hooks::parse::parse_transcript_with_context;
-use code_hooks::transcript::TranscriptEntry;
+use claude_transcript::TranscriptEntry;
+use claude_transcript::parse::parse_transcript_with_context;
 use std::fs;
 
 pub fn display_transcripts(paths: Vec<String>, color_mode: ColorMode, strict: bool) -> Result<()> {
