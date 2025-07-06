@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use code_hooks::{HookResponse, Input, PostToolUse, PostToolUseOutput, Stop, TranscriptReader};
+use rust_hook::is_rust_file;
 use std::process::Command;
 
 #[derive(Parser)]
@@ -48,7 +49,7 @@ fn handle_posttool() -> Result<()> {
     eprintln!("[rust-hook] File path: {file_path}");
 
     // Check if the file is a Rust file
-    if !file_path.ends_with(".rs") {
+    if !is_rust_file(file_path) {
         eprintln!("[rust-hook] Not a Rust file, passing through");
         PostToolUseOutput::passthrough().respond();
     }
@@ -120,7 +121,7 @@ fn has_edited_rust_files(input: &Stop) -> Result<bool> {
                             .get("file_path")
                             .and_then(|v| v.as_str())
                         {
-                            if file_path.ends_with(".rs") {
+                            if is_rust_file(file_path) {
                                 eprintln!("[rust-hook] Found edited Rust file: {file_path}");
                                 return Ok(true);
                             }
