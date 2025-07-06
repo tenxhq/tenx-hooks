@@ -1,5 +1,5 @@
+use rust_hook::utils::{find_project_root, is_rust_file};
 use std::fs;
-use std::path::Path;
 use tempfile::TempDir;
 
 #[test]
@@ -70,25 +70,4 @@ fn test_subcommand_help() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("stop"));
-}
-
-// Helper functions copied from main.rs for testing
-fn find_project_root(file_path: &str) -> String {
-    let path = Path::new(file_path);
-    let mut current = path.parent();
-
-    while let Some(dir) = current {
-        if dir.join("Cargo.toml").exists() {
-            return dir.to_string_lossy().to_string();
-        }
-        current = dir.parent();
-    }
-
-    path.parent()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| ".".to_string())
-}
-
-fn is_rust_file(file_path: &str) -> bool {
-    file_path.ends_with(".rs")
 }
