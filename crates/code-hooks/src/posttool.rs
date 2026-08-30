@@ -1,12 +1,13 @@
+use std::{collections::HashMap, fs};
+
+use claude_transcript::{TranscriptEntry, parse::parse_transcript};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::fs;
 
-use crate::Result;
-use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
-use claude_transcript::TranscriptEntry;
-use claude_transcript::parse::parse_transcript;
+use crate::{
+    Result,
+    io::{Decision, HookResponse, Input, TranscriptReader, is_none},
+};
 
 /// Input structure for PostToolUse hooks.
 ///
@@ -31,14 +32,17 @@ pub struct PostToolUse {
 impl PostToolUse {
     /// Create a block response that suppresses the normal tool result
     ///
-    /// Claude sees the reason as an error message instead of the actual tool output.
+    /// Claude sees the reason as an error message instead of the actual tool
+    /// output.
     pub fn block(&self, reason: &str) -> PostToolUseOutput {
         PostToolUseOutput::block(reason)
     }
 
-    /// Create a passthrough response that sends the normal tool result to Claude
+    /// Create a passthrough response that sends the normal tool result to
+    /// Claude
     ///
-    /// The tool result is passed through unchanged. Any reason provided would be discarded.
+    /// The tool result is passed through unchanged. Any reason provided would
+    /// be discarded.
     pub fn passthrough(&self) -> PostToolUseOutput {
         PostToolUseOutput::passthrough()
     }
@@ -87,8 +91,9 @@ pub struct PostToolUseOutput {
 impl PostToolUseOutput {
     /// Create a block response that suppresses the normal tool result
     ///
-    /// Claude sees the reason as an error message instead of the actual tool output.
-    /// The tool has already executed, but this replaces what Claude sees.
+    /// Claude sees the reason as an error message instead of the actual tool
+    /// output. The tool has already executed, but this replaces what Claude
+    /// sees.
     pub fn block(reason: &str) -> Self {
         Self {
             decision: Some(Decision::Block),
@@ -97,10 +102,12 @@ impl PostToolUseOutput {
         }
     }
 
-    /// Create a passthrough response that sends the normal tool result to Claude
+    /// Create a passthrough response that sends the normal tool result to
+    /// Claude
     ///
-    /// This omits the decision field, so the normal tool_result is passed to Claude.
-    /// Any reason provided would be discarded since there's no decision to attach it to.
+    /// This omits the decision field, so the normal tool_result is passed to
+    /// Claude. Any reason provided would be discarded since there's no
+    /// decision to attach it to.
     pub fn passthrough() -> Self {
         Self::default()
     }

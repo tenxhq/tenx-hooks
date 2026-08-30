@@ -1,10 +1,12 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 
-use crate::Result;
-use crate::io::{HookResponse, Input, TranscriptReader, is_none};
-use claude_transcript::TranscriptEntry;
-use claude_transcript::parse::parse_transcript;
+use claude_transcript::{TranscriptEntry, parse::parse_transcript};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    Result,
+    io::{HookResponse, Input, TranscriptReader, is_none},
+};
 
 /// Input structure for Notification hooks.
 ///

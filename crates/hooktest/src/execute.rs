@@ -1,11 +1,17 @@
-use crate::output::Output;
-use anyhow::Result;
-use std::io::Write;
-use std::process::{Command, Stdio};
+use std::{
+    io::Write,
+    process::{Command, Stdio},
+};
 
-/// Spawn a hook process, feed it the given JSON input, and print execution details.
+use anyhow::Result;
+
+use crate::output::Output;
+
+/// Spawn a hook process, feed it the given JSON input, and print execution
+/// details.
 ///
-/// Returns the parsed JSON output if the process succeeded and produced valid JSON.
+/// Returns the parsed JSON output if the process succeeded and produced valid
+/// JSON.
 pub fn execute_hook(
     out: &mut Output,
     hook_args: &[String],

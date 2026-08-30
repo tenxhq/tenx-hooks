@@ -15,3 +15,6 @@ anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 syntect = "5"
 atty = "0.2"
+
+[lib]
+doctest = false

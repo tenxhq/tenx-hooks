@@ -1,8 +1,7 @@
-use crate::color::ColorMode;
-use crate::execute::execute_hook;
-use crate::output::Output;
 use anyhow::Result;
 use code_hooks::SubagentStop;
+
+use crate::{color::ColorMode, execute::execute_hook, output::Output};
 
 pub fn run_subagent_stop_hook(
     session_id: String,

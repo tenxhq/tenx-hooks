@@ -1,8 +1,9 @@
+use std::process::Command;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use code_hooks::{HookResponse, Input, PostToolUse, PostToolUseOutput, Stop, TranscriptReader};
 use rust_hook::is_rust_file;
-use std::process::Command;
 
 #[derive(Parser)]
 #[command(name = "rust-hook")]
@@ -108,25 +109,22 @@ fn has_edited_rust_files(input: &Stop) -> Result<bool> {
     let transcript = input.read_transcript()?;
 
     for entry in transcript {
-        if let TranscriptEntry::Assistant(assistant_entry) = entry {
-            if let TranscriptMessage::Assistant {
+        if let TranscriptEntry::Assistant(assistant_entry) = entry
+            && let TranscriptMessage::Assistant {
                 tool_uses: Some(tool_uses),
                 ..
             } = assistant_entry.message
-            {
-                for tool_use in tool_uses {
-                    if tool_use.tool_name == "Edit" || tool_use.tool_name == "MultiEdit" {
-                        if let Some(file_path) = tool_use
-                            .tool_input
-                            .get("file_path")
-                            .and_then(|v| v.as_str())
-                        {
-                            if is_rust_file(file_path) {
-                                eprintln!("[rust-hook] Found edited Rust file: {file_path}");
-                                return Ok(true);
-                            }
-                        }
-                    }
+        {
+            for tool_use in tool_uses {
+                if (tool_use.tool_name == "Edit" || tool_use.tool_name == "MultiEdit")
+                    && let Some(file_path) = tool_use
+                        .tool_input
+                        .get("file_path")
+                        .and_then(|v| v.as_str())
+                    && is_rust_file(file_path)
+                {
+                    eprintln!("[rust-hook] Found edited Rust file: {file_path}");
+                    return Ok(true);
                 }
             }
         }

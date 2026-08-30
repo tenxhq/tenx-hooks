@@ -15,7 +15,8 @@ fn main() -> Result<()> {
         stop.allow().respond();
     }
 
-    // For demonstration, block Claude from stopping if session ID contains "continue"
+    // For demonstration, block Claude from stopping if session ID contains
+    // "continue"
     if stop.session_id.contains("continue") {
         eprintln!("Blocking stop - session requires continuation");
         stop.block("Task not yet complete, continuing...").respond();

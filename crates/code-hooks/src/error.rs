@@ -1,4 +1,5 @@
 use std::io;
+
 use thiserror::Error;
 
 /// Error types for hook operations
@@ -22,8 +23,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::Value;
+
+    use super::*;
 
     #[test]
     fn test_error_display() {

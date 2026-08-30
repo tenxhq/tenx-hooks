@@ -1,12 +1,13 @@
+use std::{collections::HashMap, fs};
+
+use claude_transcript::{TranscriptEntry, parse::parse_transcript};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::fs;
 
-use crate::Result;
-use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
-use claude_transcript::TranscriptEntry;
-use claude_transcript::parse::parse_transcript;
+use crate::{
+    Result,
+    io::{Decision, HookResponse, Input, TranscriptReader, is_none},
+};
 
 /// Input structure for PreToolUse hooks.
 ///
@@ -28,7 +29,8 @@ pub struct PreToolUse {
 impl PreToolUse {
     /// Create an approval response that bypasses the permission system
     ///
-    /// The tool executes immediately. The reason is shown to the user but not Claude.
+    /// The tool executes immediately. The reason is shown to the user but not
+    /// Claude.
     pub fn approve(&self, reason: &str) -> PreToolUseOutput {
         PreToolUseOutput::approve(reason)
     }
@@ -40,9 +42,11 @@ impl PreToolUse {
         PreToolUseOutput::block(reason)
     }
 
-    /// Create a passthrough response that defers to Claude's regular approval flow
+    /// Create a passthrough response that defers to Claude's regular approval
+    /// flow
     ///
-    /// The agent may show an approval dialogue or proceed based on its configuration.
+    /// The agent may show an approval dialogue or proceed based on its
+    /// configuration.
     pub fn passthrough(&self) -> PreToolUseOutput {
         PreToolUseOutput::passthrough()
     }
@@ -64,7 +68,8 @@ impl TranscriptReader for PreToolUse {
 #[serde(rename_all = "camelCase")]
 pub struct PreToolUseOutput {
     /// Whether to approve or block the tool call.
-    /// - `Approve`: Bypasses the permission system, reason shown to user but not Claude
+    /// - `Approve`: Bypasses the permission system, reason shown to user but
+    ///   not Claude
     /// - `Block`: Prevents execution, reason shown to Claude
     /// - `None`: Follows existing permission flow
     #[serde(skip_serializing_if = "is_none")]
@@ -95,7 +100,8 @@ pub struct PreToolUseOutput {
 impl PreToolUseOutput {
     /// Create an approval response that bypasses the permission system
     ///
-    /// The tool executes immediately. The reason is shown to the user but not Claude.
+    /// The tool executes immediately. The reason is shown to the user but not
+    /// Claude.
     pub fn approve(reason: &str) -> Self {
         Self {
             decision: Some(Decision::Approve),
@@ -115,7 +121,8 @@ impl PreToolUseOutput {
         }
     }
 
-    /// Create a passthrough response that defers to Claude's regular approval flow
+    /// Create a passthrough response that defers to Claude's regular approval
+    /// flow
     ///
     /// This omits the decision field, allowing the agent to show an approval
     /// dialogue or proceed based on its configuration.

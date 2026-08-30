@@ -1,10 +1,12 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 
-use crate::Result;
-use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
-use claude_transcript::TranscriptEntry;
-use claude_transcript::parse::parse_transcript;
+use claude_transcript::{TranscriptEntry, parse::parse_transcript};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    Result,
+    io::{Decision, HookResponse, Input, TranscriptReader, is_none},
+};
 
 /// Input structure for SubagentStop hooks.
 ///
@@ -18,8 +20,8 @@ pub struct SubagentStop {
     pub session_id: String,
     /// Path to the conversation transcript JSON file
     pub transcript_path: String,
-    /// True when the subagent is already continuing as a result of a SubagentStop hook.
-    /// Check this to prevent infinite loops.
+    /// True when the subagent is already continuing as a result of a
+    /// SubagentStop hook. Check this to prevent infinite loops.
     pub stop_hook_active: bool,
 }
 
@@ -40,7 +42,8 @@ impl SubagentStop {
 
     /// Create a response that stops the subagent immediately
     ///
-    /// This prevents any further processing and shows the stop reason to the user.
+    /// This prevents any further processing and shows the stop reason to the
+    /// user.
     pub fn stop(&self, reason: &str) -> SubagentStopOutput {
         SubagentStopOutput::default().and_stop(reason)
     }
@@ -71,8 +74,8 @@ pub struct SubagentStopOutput {
     #[serde(skip_serializing_if = "is_none")]
     pub reason: Option<String>,
 
-    /// Whether the subagent should continue after hook execution (default: true).
-    /// Takes precedence over decision if set to false.
+    /// Whether the subagent should continue after hook execution (default:
+    /// true). Takes precedence over decision if set to false.
     #[serde(rename = "continue", skip_serializing_if = "is_none")]
     pub continue_: Option<bool>,
 

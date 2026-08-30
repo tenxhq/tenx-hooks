@@ -1,12 +1,11 @@
+use std::{fs, os::unix::fs::PermissionsExt, process::Command};
+
 use assert_cmd::prelude::*;
 use predicates::str::contains;
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::process::Command;
 use tempfile::{NamedTempFile, TempPath};
 
 fn make_hook_script() -> TempPath {
-    let mut file = NamedTempFile::new().unwrap();
+    let file = NamedTempFile::new().unwrap();
     fs::write(
         file.path(),
         "#!/bin/sh\ncat >/dev/null\nprintf '{\"decision\":\"approve\",\"reason\":\"ok\"}'\n",
@@ -31,13 +30,7 @@ fn test_pretool() {
     let hook = make_hook_script();
     Command::cargo_bin("hooktest")
         .unwrap()
-        .args([
-            "pretool",
-            "--tool",
-            "Bash",
-            "--",
-            hook.to_str().unwrap(),
-        ])
+        .args(["pretool", "--tool", "Bash", "--", hook.to_str().unwrap()])
         .assert()
         .success()
         .stdout(contains("Decision: APPROVE"));

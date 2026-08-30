@@ -1,5 +1,7 @@
-use claude_transcript::parse::{parse_transcript_line, parse_transcript_with_context};
-use claude_transcript::{ContentBlock, MessageContent, TranscriptEntry, TranscriptMessage};
+use claude_transcript::{
+    ContentBlock, MessageContent, TranscriptEntry, TranscriptMessage,
+    parse::{parse_transcript_line, parse_transcript_with_context},
+};
 
 #[test]
 fn test_tool_result_with_array_content() {
@@ -56,7 +58,8 @@ fn test_parse_various_entry_types() {
         TranscriptEntry::Assistant(_)
     ));
 
-    // Test summary entry - Summary doesn't have CommonFields, just summary and optional leafUuid
+    // Test summary entry - Summary doesn't have CommonFields, just summary and
+    // optional leafUuid
     let summary_json = r#"{"type":"summary","summary":"Test summary","leafUuid":"leaf-123"}"#;
     let summary_entry = parse_transcript_line(summary_json).expect("Should parse summary entry");
     assert!(matches!(summary_entry, TranscriptEntry::Summary(_)));

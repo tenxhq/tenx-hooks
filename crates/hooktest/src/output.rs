@@ -1,7 +1,9 @@
-use crate::color::{ColorMode, JsonHighlighter};
-use anyhow::Result;
 use std::io::Write;
+
+use anyhow::Result;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+
+use crate::color::{ColorMode, JsonHighlighter};
 
 pub struct Output {
     stdout: StandardStream,

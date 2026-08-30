@@ -1,8 +1,10 @@
 use anyhow::Result;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, ThemeSet};
-use syntect::parsing::SyntaxSet;
-use syntect::util::as_24_bit_terminal_escaped;
+use syntect::{
+    easy::HighlightLines,
+    highlighting::{Style, ThemeSet},
+    parsing::SyntaxSet,
+    util::as_24_bit_terminal_escaped,
+};
 
 #[derive(Clone, Copy)]
 pub enum ColorMode {

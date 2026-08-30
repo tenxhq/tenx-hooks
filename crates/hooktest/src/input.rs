@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use anyhow::{Context, Result};
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// Parse key=value pairs into a HashMap of string values
 pub fn parse_string_inputs(inputs: &[String]) -> Result<HashMap<String, Value>> {

@@ -9,10 +9,11 @@ mod pretool;
 mod stop;
 mod subagent_stop;
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use color::ColorMode;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Parser)]
 #[command(
@@ -50,11 +51,13 @@ enum Commands {
         #[arg(long, default_value = "Bash")]
         tool: String,
 
-        /// Tool input as key=value pairs (e.g., --tool-input command="echo hello")
+        /// Tool input as key=value pairs (e.g., --tool-input command="echo
+        /// hello")
         #[arg(long = "tool-input", value_name = "KEY=VALUE")]
         tool_input: Vec<String>,
 
-        /// Tool input as key=json pairs (e.g., --tool-input-json args='["one", "two"]')
+        /// Tool input as key=json pairs (e.g., --tool-input-json args='["one",
+        /// "two"]')
         #[arg(long = "tool-input-json", value_name = "KEY=JSON")]
         tool_input_json: Vec<String>,
 
@@ -77,19 +80,23 @@ enum Commands {
         #[arg(long, default_value = "Bash")]
         tool: String,
 
-        /// Tool input as key=value pairs (e.g., --tool-input command="echo hello")
+        /// Tool input as key=value pairs (e.g., --tool-input command="echo
+        /// hello")
         #[arg(long = "tool-input", value_name = "KEY=VALUE")]
         tool_input: Vec<String>,
 
-        /// Tool input as key=json pairs (e.g., --tool-input-json args='["one", "two"]')
+        /// Tool input as key=json pairs (e.g., --tool-input-json args='["one",
+        /// "two"]')
         #[arg(long = "tool-input-json", value_name = "KEY=JSON")]
         tool_input_json: Vec<String>,
 
-        /// Tool response as key=value pairs (e.g., --tool-response output="test")
+        /// Tool response as key=value pairs (e.g., --tool-response
+        /// output="test")
         #[arg(long = "tool-response", value_name = "KEY=VALUE")]
         tool_response: Vec<String>,
 
-        /// Tool response as key=json pairs (e.g., --tool-response-json exitCode=0)
+        /// Tool response as key=json pairs (e.g., --tool-response-json
+        /// exitCode=0)
         #[arg(long = "tool-response-json", value_name = "KEY=JSON")]
         tool_response_json: Vec<String>,
 
@@ -161,7 +168,8 @@ enum Commands {
     /// Read an event from stdin and appendit to a JSONL log file
     #[command(name = "log")]
     Log {
-        /// Event type to log (pretool, posttool, notification, stop, subagentstop)
+        /// Event type to log (pretool, posttool, notification, stop,
+        /// subagentstop)
         event: String,
 
         /// File path to write the log

@@ -1,8 +1,12 @@
-use crate::error::Result;
+use std::{
+    io::{self, Read},
+    process,
+};
+
 use claude_transcript::TranscriptEntry;
 use serde::{Deserialize, Serialize};
-use std::io::{self, Read};
-use std::process;
+
+use crate::error::Result;
 
 /// Trait for hook input types that can be read from stdin.
 ///
@@ -87,6 +91,7 @@ pub enum Decision {
 pub trait TranscriptReader {
     /// Read and parse the transcript file.
     ///
-    /// Returns a vector of transcript entries from the JSONL file at transcript_path.
+    /// Returns a vector of transcript entries from the JSONL file at
+    /// transcript_path.
     fn read_transcript(&self) -> Result<Vec<TranscriptEntry>>;
 }

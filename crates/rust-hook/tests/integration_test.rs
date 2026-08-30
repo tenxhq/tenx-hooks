@@ -1,5 +1,6 @@
-use rust_hook::utils::{find_project_root, is_rust_file};
 use std::fs;
+
+use rust_hook::utils::{find_project_root, is_rust_file};
 use tempfile::TempDir;
 
 #[test]

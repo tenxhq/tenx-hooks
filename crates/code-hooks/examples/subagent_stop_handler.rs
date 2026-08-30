@@ -15,7 +15,8 @@ fn main() -> Result<()> {
         subagent_stop.allow().respond();
     }
 
-    // For demonstration, block subagent from stopping if session ID contains "continue"
+    // For demonstration, block subagent from stopping if session ID contains
+    // "continue"
     if subagent_stop.session_id.contains("continue") {
         eprintln!("Blocking subagent stop - session requires continuation");
         subagent_stop

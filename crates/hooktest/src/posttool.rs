@@ -1,9 +1,9 @@
-use crate::color::ColorMode;
-use crate::execute::execute_hook;
-use crate::output::Output;
+use std::collections::HashMap;
+
 use anyhow::Result;
 use code_hooks::PostToolUse;
-use std::collections::HashMap;
+
+use crate::{color::ColorMode, execute::execute_hook, output::Output};
 
 pub fn run_posttooluse_hook(
     session_id: String,

@@ -14,16 +14,16 @@ fn main() -> Result<()> {
     }
 
     // Check if command contains sensitive patterns
-    if let Some(command) = hook.tool_input.get("command").and_then(|v| v.as_str()) {
-        if command.contains("secret") || command.contains("password") {
-            // Block the output from being shown to Claude
-            let response = PostToolUseOutput::block(
-                "Tool output contains potentially sensitive information. Review required.",
-            );
+    if let Some(command) = hook.tool_input.get("command").and_then(|v| v.as_str())
+        && (command.contains("secret") || command.contains("password"))
+    {
+        // Block the output from being shown to Claude
+        let response = PostToolUseOutput::block(
+            "Tool output contains potentially sensitive information. Review required.",
+        );
 
-            // Write the response
-            response.respond();
-        }
+        // Write the response
+        response.respond();
     }
 
     // Otherwise, passthrough the tool output

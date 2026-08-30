@@ -1,6 +1,8 @@
-use crate::TranscriptEntry;
-use serde_json;
 use std::fmt;
+
+use serde_json;
+
+use crate::TranscriptEntry;
 
 /// Error type for transcript parsing with detailed context
 #[derive(Debug)]

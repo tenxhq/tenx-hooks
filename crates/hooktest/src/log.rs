@@ -1,13 +1,17 @@
-use crate::color::ColorMode;
+use std::{
+    fs::OpenOptions,
+    io::Write,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use anyhow::{Result, bail};
 use code_hooks::{
     HookResponse, Input, Notification, PostToolUse, PostToolUseOutput, PreToolUse,
     PreToolUseOutput, Stop, SubagentStop, TranscriptReader,
 };
 use serde::Serialize;
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::color::ColorMode;
 
 #[derive(Serialize)]
 struct LogEntry<'a, T> {

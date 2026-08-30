@@ -1,10 +1,12 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 
-use crate::Result;
-use crate::io::{Decision, HookResponse, Input, TranscriptReader, is_none};
-use claude_transcript::TranscriptEntry;
-use claude_transcript::parse::parse_transcript;
+use claude_transcript::{TranscriptEntry, parse::parse_transcript};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    Result,
+    io::{Decision, HookResponse, Input, TranscriptReader, is_none},
+};
 
 /// Input structure for Stop hooks.
 ///
@@ -39,7 +41,8 @@ impl Stop {
 
     /// Create a response that stops Claude immediately
     ///
-    /// This prevents any further processing and shows the stop reason to the user.
+    /// This prevents any further processing and shows the stop reason to the
+    /// user.
     pub fn stop(&self, reason: &str) -> StopOutput {
         StopOutput::default().and_stop(reason)
     }
