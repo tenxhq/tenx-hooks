@@ -1,3 +1,5 @@
+mod cargo_env;
+
 use std::process::Command;
 
 use anyhow::Result;
@@ -186,7 +188,7 @@ struct CommandOutput {
 }
 
 fn run_cargo_fmt() -> Result<CommandOutput> {
-    let mut cmd = Command::new("cargo");
+    let mut cmd = cargo_env::command("cargo");
     cmd.args(["fmt", "--all"]);
 
     log_command(&cmd, ".", "cargo fmt --all");
@@ -202,7 +204,7 @@ fn run_cargo_fmt() -> Result<CommandOutput> {
 }
 
 fn run_cargo_clippy() -> Result<CommandOutput> {
-    let mut cmd = Command::new("cargo");
+    let mut cmd = cargo_env::command("cargo");
     cmd.args(["clippy", "--tests", "--examples", "--fix", "--allow-dirty"]);
 
     log_command(
@@ -215,7 +217,8 @@ fn run_cargo_clippy() -> Result<CommandOutput> {
 
     log_command_result(&output, "cargo clippy");
 
-    // Check if there are any warnings in stderr, even if clippy exited successfully
+    // Check if there are any warnings in stderr, even if clippy exited
+    // successfully
     let stderr_str = String::from_utf8_lossy(&output.stderr);
     let has_warnings = stderr_str.contains("warning:") || stderr_str.contains("error:");
 
