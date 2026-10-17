@@ -1,7 +1,4 @@
-#[path = "../src/cargo_env.rs"]
-mod cargo_env;
-
-use std::fs;
+use std::{fs, process::Command};
 
 use rust_hook::utils::{find_project_root, is_rust_file};
 use tempfile::TempDir;
@@ -37,8 +34,8 @@ fn test_rust_file_check() {
 
 #[test]
 fn test_cli_help() {
-    let output = cargo_env::command("cargo")
-        .args(["run", "--bin", "rust-hook", "--", "--help"])
+    let output = Command::new(env!("CARGO_BIN_EXE_rust-hook"))
+        .arg("--help")
         .output()
         .expect("Failed to execute command");
 
@@ -52,8 +49,8 @@ fn test_cli_help() {
 #[test]
 fn test_subcommand_help() {
     // Test posttool help
-    let output = cargo_env::command("cargo")
-        .args(["run", "--bin", "rust-hook", "--", "posttool", "--help"])
+    let output = Command::new(env!("CARGO_BIN_EXE_rust-hook"))
+        .args(["posttool", "--help"])
         .output()
         .expect("Failed to execute command");
 
@@ -62,8 +59,8 @@ fn test_subcommand_help() {
     assert!(stdout.contains("post-tool-use"));
 
     // Test stop help
-    let output = cargo_env::command("cargo")
-        .args(["run", "--bin", "rust-hook", "--", "stop", "--help"])
+    let output = Command::new(env!("CARGO_BIN_EXE_rust-hook"))
+        .args(["stop", "--help"])
         .output()
         .expect("Failed to execute command");
 
